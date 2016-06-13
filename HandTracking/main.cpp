@@ -7,9 +7,32 @@
 //
 
 #include <iostream>
+#include <opencv2/opencv.hpp>
+
+using namespace cv;
+using namespace std;
 
 int main(int argc, const char * argv[]) {
-    // insert code here...
-    std::cout << "Hello, World!\n";
+    VideoCapture cap(0);
+    
+    if(!cap.isOpened())
+        return -1;
+    
+    while(true)
+    {
+        Mat frame, edges;
+        
+        cap >> frame;
+        
+        cvtColor(frame, frame, CV_BGR2GRAY);
+        GaussianBlur(frame, frame, Size(7,7), 1.5);
+        Canny(frame, edges, 0, 30);
+        
+        imshow("Edges", edges);
+        
+        if(waitKey(30) >= 0)
+            break;
+    }
+    
     return 0;
 }

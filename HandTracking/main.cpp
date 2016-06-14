@@ -13,43 +13,75 @@
 using namespace cv;
 using namespace std;
 
-Mat frame, edges;
+Mat frame, filtered;
 
 Mat foregroundMask;
 
-Ptr<BackgroundSubtractor> pMOG2;
-int keyboard;
+Ptr<BackgroundSubtractor> bgSub;
 
 int main(int argc, const char * argv[]) {
+    
     VideoCapture cap(0);
+    
+    //bgSub = createBackgroundSubtractorMOG2();
     
     if(!cap.isOpened())
         return -1;
-    
-    pMOG2 = createBackgroundSubtractorMOG2();
     
     while(true)
     {
         
         cap >> frame;
     
-        cvtColor(frame, frame, CV_BGR2GRAY);
+        cvtColor(frame, filtered, CV_BGR2GRAY);
+        GaussianBlur(filtered, filtered, Size(7,7), 1.5);
         
-        pMOG2->apply(frame, foregroundMask);
+        //Canny(edges, edges, 0, 30);
         
-        stringstream ss;
+        //bgSub->apply(frame, foregroundMask, -1);
         
-        rectangle(frame, Point(10, 2), Point(100,20), Scalar(255,255,255), -1);
+        Mat frame_gray;
+        Mat threshold_output;
         
-        ss << cap.get(CAP_PROP_POS_FRAMES);
+        vector< vector<Point> > contours;
+        vector <Vec4i> hierarchy;
         
-        string frameNumberString = ss.str();
         
-        putText(frame, frameNumberString.c_str(), Point(15, 15),
-                FONT_HERSHEY_COMPLEX, 0.5, Scalar(0,0,0));
+        //Find contours
+        cvtColor(frame, frame_gray, CV_BGR2GRAY);
+        threshold(filtered, threshold_output, 200, 255, THRESH_BINARY);
         
-        imshow("Frame", frame);
-        imshow("Mask", foregroundMask);
+        imshow("Hand", threshold_output);
+        
+        findContours(threshold_output, contours, hierarchy,
+                     CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
+        
+        //find convex hull for each object
+        vector < vector<Point> > hull(contours.size());
+        
+        for (int i=0; i < contours.size(); i++)
+        {
+            convexHull(Mat(contours[i]), hull[i], false);
+        }
+        
+        //draw contours and hull results
+        RNG rand;
+        Mat drawing = Mat::zeros(threshold_output.size(), CV_8UC3);
+        
+        for (int i = 0; i < contours.size(); i++)
+        {
+            Scalar colour = Scalar(rand.uniform(0, 255),
+                                   rand.uniform(0, 255),
+                                   rand.uniform(0, 255));
+            
+            drawContours(drawing, contours, i, colour, 1, 8, vector<Vec4i>(), 0, Point());
+            
+            drawContours(drawing, hull, i, colour, 1, 8, vector<Vec4i>(), 0, Point());
+        }
+        
+        
+        namedWindow("Hand Recognition");
+        imshow("Hand Recognition", drawing);
         
         if(waitKey(30) >= 0)
             break;
@@ -57,6 +89,23 @@ int main(int argc, const char * argv[]) {
     
     return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

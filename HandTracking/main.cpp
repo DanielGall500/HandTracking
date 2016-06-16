@@ -13,9 +13,8 @@
 using namespace cv;
 using namespace std;
 
-Mat frame, filtered;
-
 Mat foregroundMask;
+int thresh1, thresh2;
 
 Ptr<BackgroundSubtractor> bgSub;
 
@@ -28,8 +27,17 @@ int main(int argc, const char * argv[]) {
     if(!cap.isOpened())
         return -1;
     
+    namedWindow("Testing");
+    
+    thresh1 = 0; //sliding values for threshold
+    thresh2 = 0;
+    
+    createTrackbar("Beginning Threshold", "Testing", &thresh1, 255);
+    createTrackbar("Ending Threshold", "Testing", &thresh2, 255);
+    
     while(true)
     {
+        Mat frame, filtered;
         
         cap >> frame;
     
@@ -48,10 +56,9 @@ int main(int argc, const char * argv[]) {
         
         
         //Find contours
-        cvtColor(frame, frame_gray, CV_BGR2GRAY);
-        threshold(filtered, threshold_output, 200, 255, THRESH_BINARY);
+        threshold(filtered, threshold_output, thresh1, thresh2, THRESH_BINARY);
         
-        imshow("Hand", threshold_output);
+        imshow("Testing", threshold_output);
         
         findContours(threshold_output, contours, hierarchy,
                      CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
@@ -80,8 +87,8 @@ int main(int argc, const char * argv[]) {
         }
         
         
-        namedWindow("Hand Recognition");
-        imshow("Hand Recognition", drawing);
+        //namedWindow("Hand Recognition");
+        //imshow("Hand Recognition", drawing);
         
         if(waitKey(30) >= 0)
             break;

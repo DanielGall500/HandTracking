@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>DA0337C0-9491-4357-9899-E1ABCF4DDF9A</string>
+	<key>IDESourceControlProjectName</key>
+	<string>project</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>E1F39DA2BDE73EC51344270FA6CF025BFA407502</key>
+		<string>https://github.com/DannyGotTea/HandTracking.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>HandTracking.xcodeproj/project.xcworkspace</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>E1F39DA2BDE73EC51344270FA6CF025BFA407502</key>
+		<string>../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://github.com/DannyGotTea/HandTracking.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>E1F39DA2BDE73EC51344270FA6CF025BFA407502</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>E1F39DA2BDE73EC51344270FA6CF025BFA407502</string>
+			<key>IDESourceControlWCCName</key>
+			<string>HandTracking</string>
+		</dict>
+	</array>
+</dict>
+</plist>

@@ -13,6 +13,9 @@
 using namespace cv;
 using namespace std;
 
+int BskinMin = 130, GskinMin = 160, RskinMin = 230;
+int BskinMax = 200, GskinMax = 220, RskinMax = 255;
+
 bool inRange(int val, int min, int max);
 Mat findSkin(Mat frame);
 
@@ -25,13 +28,23 @@ int main(int argc, const char * argv[]) {
     
     namedWindow("Testing");
     
+    createTrackbar("BlueMin", "Testing", &BskinMin, 255);
+    createTrackbar("GreenMin", "Testing", &GskinMin, 255);
+    createTrackbar("RedMin", "Testing", &RskinMin, 255);
+    
+    createTrackbar("BlueMax", "Testing", &BskinMax, 255);
+    createTrackbar("GreenMax", "Testing", &GskinMax, 255);
+    createTrackbar("RedMax", "Testing", &RskinMax, 255);
+    
     while(true)
     {
-        Mat frame;
+        Mat frame, blurred;
         
         cap >> frame;
         
-        Mat newFrame = findSkin(frame);
+        GaussianBlur(frame, blurred, Size(7,7), 1.5);
+        
+        Mat newFrame = findSkin(blurred);
         
         cout << newFrame.at<Vec3b>(0,0) << endl;
         
@@ -55,16 +68,19 @@ Mat findSkin(Mat frame)
     Vec3b colChannels;
     int b, g, r;
     
-    int BskinMin = 130, GskinMin = 160, RskinMin = 230;
-    int BskinMax = 200, GskinMax = 220, RskinMax = 255;
-    
     for (int rows = 0; rows <= frame.rows; rows++)
     {
         for (int cols = 0; cols <= frame.cols; cols++)
         {
             colChannels = frame.at<Vec3b>(rows, cols);
-            b,g,r = colChannels[0], colChannels[1], colChannels[2];
             
+            b = colChannels[0];
+            g = colChannels[1];
+            r = colChannels[2];
+            
+            /*if(withinRange(b, BskinMin, BskinMax) &&
+               withinRange(g, GskinMin, GskinMax) &&
+               withinRange(r, RskinMin, RskinMax))*/
             
             if(withinRange(b, BskinMin, BskinMax) &&
                withinRange(g, GskinMin, GskinMax) &&

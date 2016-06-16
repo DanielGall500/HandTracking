@@ -13,90 +13,76 @@
 using namespace cv;
 using namespace std;
 
-Mat foregroundMask;
-int thresh1, thresh2;
-
-Ptr<BackgroundSubtractor> bgSub;
+bool inRange(int val, int min, int max);
+Mat findSkin(Mat frame);
 
 int main(int argc, const char * argv[]) {
     
-    VideoCapture cap(0);
-    
-    //bgSub = createBackgroundSubtractorMOG2();
+    VideoCapture cap(0); //always BGR
     
     if(!cap.isOpened())
         return -1;
     
     namedWindow("Testing");
     
-    thresh1 = 0; //sliding values for threshold
-    thresh2 = 0;
-    
-    createTrackbar("Beginning Threshold", "Testing", &thresh1, 255);
-    createTrackbar("Ending Threshold", "Testing", &thresh2, 255);
-    
     while(true)
     {
-        Mat frame, filtered;
+        Mat frame;
         
         cap >> frame;
-    
-        cvtColor(frame, filtered, CV_BGR2GRAY);
-        GaussianBlur(filtered, filtered, Size(7,7), 1.5);
         
-        //Canny(edges, edges, 0, 30);
+        Mat newFrame = findSkin(frame);
         
-        //bgSub->apply(frame, foregroundMask, -1);
+        cout << newFrame.at<Vec3b>(0,0) << endl;
         
-        Mat frame_gray;
-        Mat threshold_output;
+        imshow("Testing", newFrame);
         
-        vector< vector<Point> > contours;
-        vector <Vec4i> hierarchy;
+        if(waitKey(30) > 0)
+            return -1;
         
-        
-        //Find contours
-        threshold(filtered, threshold_output, thresh1, thresh2, THRESH_BINARY);
-        
-        imshow("Testing", threshold_output);
-        
-        findContours(threshold_output, contours, hierarchy,
-                     CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
-        
-        //find convex hull for each object
-        vector < vector<Point> > hull(contours.size());
-        
-        for (int i=0; i < contours.size(); i++)
-        {
-            convexHull(Mat(contours[i]), hull[i], false);
-        }
-        
-        //draw contours and hull results
-        RNG rand;
-        Mat drawing = Mat::zeros(threshold_output.size(), CV_8UC3);
-        
-        for (int i = 0; i < contours.size(); i++)
-        {
-            Scalar colour = Scalar(rand.uniform(0, 255),
-                                   rand.uniform(0, 255),
-                                   rand.uniform(0, 255));
-            
-            drawContours(drawing, contours, i, colour, 1, 8, vector<Vec4i>(), 0, Point());
-            
-            drawContours(drawing, hull, i, colour, 1, 8, vector<Vec4i>(), 0, Point());
-        }
-        
-        
-        //namedWindow("Hand Recognition");
-        //imshow("Hand Recognition", drawing);
-        
-        if(waitKey(30) >= 0)
-            break;
     }
     
     return 0;
 }
 
+bool withinRange(int val, int min, int max) //efficiently checks whether val is in between min and max
+{
+    return (unsigned)(val - min) <= (max - min);
+}
+
+Mat findSkin(Mat frame)
+{
+    Vec3b colChannels;
+    int b, g, r;
+    
+    int BskinMin = 130, GskinMin = 160, RskinMin = 230;
+    int BskinMax = 200, GskinMax = 220, RskinMax = 255;
+    
+    for (int rows = 0; rows <= frame.rows; rows++)
+    {
+        for (int cols = 0; cols <= frame.cols; cols++)
+        {
+            colChannels = frame.at<Vec3b>(rows, cols);
+            b,g,r = colChannels[0], colChannels[1], colChannels[2];
+            
+            
+            if(withinRange(b, BskinMin, BskinMax) &&
+               withinRange(g, GskinMin, GskinMax) &&
+               withinRange(r, RskinMin, RskinMax))
+            {
+                colChannels = Vec3b(255,255,255);
+            }
+            else
+            {
+                colChannels = Vec3b(0,0,0);
+            }
+            
+            frame.at<Vec3b>(rows, cols) = colChannels;
+            
+        }
+    }
+    return frame;
+}
 
 
 

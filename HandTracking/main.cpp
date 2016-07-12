@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sstream>
 #include <fstream>
+#include <map>
 
 using namespace cv;
 using namespace std;
@@ -23,15 +24,15 @@ int BskinMax = 200, GskinMax = 220, RskinMax = 255;
 
 string file_loc = "/Users/dannyg/Desktop/Projects/HandTracking/HandTracking/Resources/";
 string face_front = "/Users/dannyg/Desktop/haarcascade_frontalface_alt.xml";
-string skin_loc = "/Users/dannyg/Desktop/Projects/Hand\ Tracking/HandTracking/Resources/SkinColour.jpg";
 
 CascadeClassifier faceCascade;
 vector<Rect> faces;
-Mat skinColour;
+map<Vec3b, int> channelValues;
 
 bool withinRange(int val, int min, int max);
 
-Mat findPrimaryColour(Mat frame);
+void findPrimaryColour(Mat frame, map<Vec3b, int> &outputChannelValues);
+void extractColour(Mat frame);
 Vec3b captureSkinColour(Mat frame);
 
 void detectFaces(Mat frame, vector<Rect> &outputFaces);
@@ -62,6 +63,7 @@ void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> lab
     
 }
 
+
 int main(int argc, const char * argv[]) {
     
     VideoCapture cap(0); //always BGR
@@ -72,13 +74,12 @@ int main(int argc, const char * argv[]) {
     
     faceCascade.load(face_front);
     
-    skinColour = imread(skin_loc);
-    cvtColor(skinColour, skinColour, CV_RGB2BGR);
-    
     if(!faceCascade.load(face_front))
     {
         cout << "Error loading cascade" << endl;
     }
+    
+    namedWindow("main");
     
     while (true)
     {
@@ -87,17 +88,9 @@ int main(int argc, const char * argv[]) {
         cap >> frame;
         frameCounter++;
         
-        if (frameCounter <= 24)
+        if (frameCounter <= 500)
         {
-            detectFaces(frame, faces);
-            
-            for (int i = 0; i < faces.size(); i++)
-            {
-                Point center(faces[i].x + faces[i].width * 0.5, faces[i].y + faces[i].height * 0.5);
-                
-                ellipse(frame, center, Size(faces[i].width * 0.5, faces[i].height * 0.5),
-                        0, 0, 360, Scalar(0,255,0), 4, 8, 0);
-            }
+            extractColour(frame);
         }
         
         if(!frame.empty())
@@ -109,13 +102,8 @@ int main(int argc, const char * argv[]) {
             cout << "Empty frame: " << endl;
         }
         
-        //GaussianBlur(frame, blurred, Size(7,7), 1.5);
         
-        //Mat newFrame = findSkin(blurred);
-        
-        //cout << newFrame.at<Vec3b>(0,0) << endl;
-        
-        imshow("Testing", frame);
+        imshow("main", frame);
         
         if(waitKey(30) > 0)
             return -1;
@@ -123,6 +111,28 @@ int main(int argc, const char * argv[]) {
     }
     
     return 0;
+}
+
+void extractColour(Mat frame)
+{
+    int wCenter = frame.size().width / 2;
+    int hCenter = frame.size().height / 2;
+    
+    rectangle(frame, Point(wCenter - 50, hCenter + 70),
+                     Point(wCenter - 30, hCenter + 50),
+                     Scalar(0,255,0));
+    
+    rectangle(frame, Point(wCenter + 50, hCenter + 150),
+                     Point(wCenter + 30, hCenter + 130),
+                     Scalar(0,255,0));
+    
+    rectangle(frame, Point(wCenter + 50, hCenter + 70),
+                     Point(wCenter + 30, hCenter + 50),
+                     Scalar(0,255,0));
+    
+    rectangle(frame, Point(wCenter - 50, hCenter + 150),
+                     Point(wCenter - 30, hCenter + 130),
+                     Scalar(0,255,0));
 }
 
 void detectFaces(Mat frame, vector<Rect> &outputFaces)
@@ -138,7 +148,9 @@ bool withinRange(int val, int min, int max) //efficiently checks whether val is 
     return (unsigned)(val - min) <= (max - min);
 }
 
-Mat findPrimaryColour(Mat frame)
+
+/*
+void findPrimaryColour(Mat frame, map<Vec3b, int> &outputChannelValues)
 {
     Vec3b colChannels;
     int b, g, r;
@@ -147,20 +159,45 @@ Mat findPrimaryColour(Mat frame)
     {
         for (int cols = 0; cols <= frame.cols; cols++)
         {
-            colChannels = frame.at<Vec3b>(rows, cols);
+            
+            colChannels = frame.at<Vec3i>(rows, cols);
             
             b = colChannels[0];
             g = colChannels[1];
             r = colChannels[2];
             
+            colChannels[2] += 100;
+            
+            
+            if (outputChannelValues.count(colChannels) == 0)
+                outputChannelValues[colChannels] = 1;
+            else
+                outputChannelValues[colChannels] += 1;
+        
+            cout << colChannels << ": " << outputChannelValues[colChannels] << endl;
             
             
             frame.at<Vec3b>(rows, cols) = colChannels;
-            
+             
         }
     }
-    return frame;
 }
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

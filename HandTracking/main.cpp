@@ -63,6 +63,7 @@ void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> lab
     
 }
 
+Rect extractOne, extractTwo, extractThree, extractFour;
 
 int main(int argc, const char * argv[]) {
     
@@ -88,8 +89,16 @@ int main(int argc, const char * argv[]) {
         cap >> frame;
         frameCounter++;
         
+        int wCenter = frame.size().width / 2;
+        int hCenter = frame.size().height / 2;
+        
         if (frameCounter <= 500)
         {
+            extractOne = Rect(Point(wCenter - 50, hCenter + 70), Point(wCenter - 30, hCenter + 50));
+            extractTwo = Rect(Point(wCenter + 50, hCenter + 150), Point(wCenter + 30, hCenter + 130));
+            extractThree = Rect(Point(wCenter + 50, hCenter + 70), Point(wCenter + 30, hCenter + 50));
+            extractFour = Rect(Point(wCenter - 50, hCenter + 150), Point(wCenter - 30, hCenter + 130));
+            
             extractColour(frame);
         }
         
@@ -115,24 +124,36 @@ int main(int argc, const char * argv[]) {
 
 void extractColour(Mat frame)
 {
-    int wCenter = frame.size().width / 2;
-    int hCenter = frame.size().height / 2;
-    
-    rectangle(frame, Point(wCenter - 50, hCenter + 70),
-                     Point(wCenter - 30, hCenter + 50),
+    rectangle(frame, extractOne,
                      Scalar(0,255,0));
     
-    rectangle(frame, Point(wCenter + 50, hCenter + 150),
-                     Point(wCenter + 30, hCenter + 130),
+    rectangle(frame, extractTwo,
                      Scalar(0,255,0));
     
-    rectangle(frame, Point(wCenter + 50, hCenter + 70),
-                     Point(wCenter + 30, hCenter + 50),
+    rectangle(frame, extractThree,
                      Scalar(0,255,0));
     
-    rectangle(frame, Point(wCenter - 50, hCenter + 150),
-                     Point(wCenter - 30, hCenter + 130),
-                     Scalar(0,255,0));
+    rectangle(frame, extractFour,
+                     Scalar(0,255,0)); //add center and one for each finger
+    
+    Mat colourOne = Mat(frame, extractOne);
+    Mat colourTwo = Mat(frame, extractTwo);
+    Mat colourThree = Mat(frame, extractThree);
+    Mat colourFour = Mat(frame, extractFour);
+    
+    for (int row = 0; row <= frame.rows; row++)
+    {
+        for(int col = 0; col <= frame.cols; col++)
+        {
+            Vec3b channelsOne = colourOne.at<Vec3b>(row, col),
+                  channelsTwo = colourTwo.at<Vec3b>(row, col),
+                  channelsThree = colourThree.at<Vec3b>(row, col),
+                  channelsFour = colourFour.at<Vec3b>(row, col);
+            
+        }
+    }
+    
+    
 }
 
 void detectFaces(Mat frame, vector<Rect> &outputFaces)

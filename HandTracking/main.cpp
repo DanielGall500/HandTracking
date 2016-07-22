@@ -27,12 +27,13 @@ string face_front = "/Users/dannyg/Desktop/haarcascade_frontalface_alt.xml";
 
 CascadeClassifier faceCascade;
 vector<Rect> faces;
-map<Vec3b, int> channelValues;
 
 bool withinRange(int val, int min, int max);
 
 void findPrimaryColour(Mat frame, map<Vec3b, int> &outputChannelValues);
 void extractColour(Mat frame);
+void applySkinThresh(Mat frame);
+
 Vec3b captureSkinColour(Mat frame);
 
 void detectFaces(Mat frame, vector<Rect> &outputFaces);
@@ -63,6 +64,9 @@ void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> lab
     
 }
 
+vector<Mat3b> extractOneVec, extractTwoVec,
+              extractThreeVec, extractFourVec;
+
 Rect extractOne, extractTwo, extractThree, extractFour;
 
 int main(int argc, const char * argv[]) {
@@ -72,13 +76,6 @@ int main(int argc, const char * argv[]) {
     
     if(!cap.isOpened())
         return -1;
-    
-    faceCascade.load(face_front);
-    
-    if(!faceCascade.load(face_front))
-    {
-        cout << "Error loading cascade" << endl;
-    }
     
     namedWindow("main");
     
@@ -92,7 +89,7 @@ int main(int argc, const char * argv[]) {
         int wCenter = frame.size().width / 2;
         int hCenter = frame.size().height / 2;
         
-        if (frameCounter <= 500)
+        if (frameCounter <= 100)
         {
             extractOne = Rect(Point(wCenter - 50, hCenter + 70), Point(wCenter - 30, hCenter + 50));
             extractTwo = Rect(Point(wCenter + 50, hCenter + 150), Point(wCenter + 30, hCenter + 130));
@@ -102,13 +99,10 @@ int main(int argc, const char * argv[]) {
             extractColour(frame);
         }
         
-        if(!frame.empty())
+        if (frameCounter >= 2)
         {
-            
-        }
-        else
-        {
-            cout << "Empty frame: " << endl;
+            applySkinThresh(frame);
+            break;
         }
         
         
@@ -136,24 +130,60 @@ void extractColour(Mat frame)
     rectangle(frame, extractFour,
                      Scalar(0,255,0)); //add center and one for each finger
     
-    Mat colourOne = Mat(frame, extractOne);
-    Mat colourTwo = Mat(frame, extractTwo);
-    Mat colourThree = Mat(frame, extractThree);
-    Mat colourFour = Mat(frame, extractFour);
+    Mat3b colourOne = Mat3b(frame, extractOne),
+    colourTwo = Mat3b(frame, extractTwo),
+    colourThree = Mat3b(frame, extractThree),
+    colourFour = Mat3b(frame, extractFour);
     
-    for (int row = 0; row <= frame.rows; row++)
+    extractOneVec.push_back(colourOne);
+    extractTwoVec.push_back(colourTwo);
+    extractThreeVec.push_back(colourThree);
+    extractFourVec.push_back(colourFour);
+}
+
+void applySkinThresh(Mat frame)
+{
+    int pixelCount = frame.rows * frame.cols;
+    
+    int blueMode[255] = {0}, greenMode[255] = {0}, redMode[255] = {0};
+    
+    Vec3b channels;
+ /*
+    for (int colourVal = 0; colourVal <= 255; colourVal++)
     {
-        for(int col = 0; col <= frame.cols; col++)
+        for (int pixel = 0; pixel <= pixelCount; pixel++)
         {
-            Vec3b channelsOne = colourOne.at<Vec3b>(row, col),
-                  channelsTwo = colourTwo.at<Vec3b>(row, col),
-                  channelsThree = colourThree.at<Vec3b>(row, col),
-                  channelsFour = colourFour.at<Vec3b>(row, col);
+            int b = pixel, g = pixel + 1, r = pixel + 2;
+            
+            channels = extractOneVec[0];
+            
+            cout << channels[0] << endl;
+            
+            //cout << extractOneVec[0].type() << endl;
+            //cout << extractOneVec[1].type() << endl;
+            //cout << extractOneVec[2].type() << endl;
+            
+            blueMode[2] += 1;
+            
+        }
+    }*/
+    
+    for (int colourVal = 0; colourVal <= 255; colourVal++)
+    {
+        for(Mat pixels : extractOneVec)
+        {
+            cout << pixels.at<Vec3b>(0, 0) << endl;
+            cout << colourVal << endl;
+            
+            /*
+             TODO:
+             get each pixel and add the intensity
+             of each channel to modeColours above
+             */
             
         }
     }
-    
-    
+ 
 }
 
 void detectFaces(Mat frame, vector<Rect> &outputFaces)
@@ -168,44 +198,6 @@ bool withinRange(int val, int min, int max) //efficiently checks whether val is 
 {
     return (unsigned)(val - min) <= (max - min);
 }
-
-
-/*
-void findPrimaryColour(Mat frame, map<Vec3b, int> &outputChannelValues)
-{
-    Vec3b colChannels;
-    int b, g, r;
-    
-    for (int rows = 0; rows <= frame.rows; rows++)
-    {
-        for (int cols = 0; cols <= frame.cols; cols++)
-        {
-            
-            colChannels = frame.at<Vec3i>(rows, cols);
-            
-            b = colChannels[0];
-            g = colChannels[1];
-            r = colChannels[2];
-            
-            colChannels[2] += 100;
-            
-            
-            if (outputChannelValues.count(colChannels) == 0)
-                outputChannelValues[colChannels] = 1;
-            else
-                outputChannelValues[colChannels] += 1;
-        
-            cout << colChannels << ": " << outputChannelValues[colChannels] << endl;
-            
-            
-            frame.at<Vec3b>(rows, cols) = colChannels;
-             
-        }
-    }
-}
-*/
-
-
 
 
 

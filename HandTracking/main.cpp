@@ -19,26 +19,14 @@
 using namespace cv;
 using namespace std;
 
-int BskinMin = 130, GskinMin = 160, RskinMin = 230;
-int BskinMax = 200, GskinMax = 220, RskinMax = 255;
-
-string file_loc = "/Users/dannyg/Desktop/Projects/HandTracking/HandTracking/Resources/";
-string face_front = "/Users/dannyg/Desktop/haarcascade_frontalface_alt.xml";
-
-CascadeClassifier faceCascade;
-vector<Rect> faces;
-
 bool withinRange(int val, int min, int max);
 int findChannelMax(int colours[]);
 
-void findPrimaryColour(Mat frame, map<Vec3b, int> &outputChannelValues);
 void extractColour(Mat frame);
 void showColourExtracts(Mat frame);
-void skinBinaryFilter(Mat extractFrame, Mat originalFrame);
 
-Vec3b captureSkinColour(Mat frame);
-
-void detectFaces(Mat frame, vector<Rect> &outputFaces);
+Vec3b extractBinaryFilter(Mat extractFrame, Mat originalFrame);
+Mat skinBinaryFilter(Mat originalFrame, int threshold);
 
 void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> labels, char seperator = ';')
 {
@@ -71,6 +59,9 @@ vector<Mat> extractOneVec, extractTwoVec,
 
 Rect extractOne, extractTwo, extractThree, extractFour;
 
+Vec3b testFilterPix;
+int thresh = 10;
+
 int main(int argc, const char * argv[]) {
     
     VideoCapture cap(0); //always BGR
@@ -91,30 +82,37 @@ int main(int argc, const char * argv[]) {
         int wCenter = frame.size().width / 2;
         int hCenter = frame.size().height / 2;
         
-        if (frameCounter <= 48)
-        {
-            extractOne = Rect(Point(wCenter - 50, hCenter + 70), Point(wCenter - 30, hCenter + 50));
-            extractTwo = Rect(Point(wCenter + 50, hCenter + 150), Point(wCenter + 30, hCenter + 130));
-            extractThree = Rect(Point(wCenter + 50, hCenter + 70), Point(wCenter + 30, hCenter + 50));
-            extractFour = Rect(Point(wCenter - 50, hCenter + 150), Point(wCenter - 30, hCenter + 130));
-            
-            showColourExtracts(frame);
-        }
-        else
+   
+        extractOne = Rect(Point(wCenter - 50, hCenter + 70), Point(wCenter - 30, hCenter + 50));
+        extractTwo = Rect(Point(wCenter + 50, hCenter + 150), Point(wCenter + 30, hCenter + 130));
+        extractThree = Rect(Point(wCenter + 50, hCenter + 70), Point(wCenter + 30, hCenter + 50));
+        extractFour = Rect(Point(wCenter - 50, hCenter + 150), Point(wCenter - 30, hCenter + 130));
+        
+        showColourExtracts(frame);
+
+        
+        if (frameCounter == 48)
         {
             extractColour(frame);
             
-            skinBinaryFilter(extractOneVec[0], frame);
-            
-            terminate();
+            testFilterPix = extractBinaryFilter(extractOneVec[0], frame);
         }
         
-        
-        imshow("main", frame);
+        if (frameCounter >= 50)
+        {
+            Mat filteredImage = skinBinaryFilter(frame, thresh);
+            
+            Mat blurredImg;
+            
+            medianBlur(filteredImage, blurredImg, 7);
+            
+            imshow("Filtered", blurredImg);
+        }
         
         if(waitKey(30) > 0)
             return -1;
         
+        imshow("main", frame);
     }
     
     return 0;
@@ -148,7 +146,7 @@ void extractColour(Mat frame)
     extractFourVec.push_back(colourFour);
 }
 
-void skinBinaryFilter(Mat extractFrame, Mat originalFrame)
+Vec3b extractBinaryFilter(Mat extractFrame, Mat originalFrame)
 {
     int blueCollection[255] = {0},
         greenCollection[255] = {0},
@@ -169,11 +167,6 @@ void skinBinaryFilter(Mat extractFrame, Mat originalFrame)
             blueCollection[b] += 1;
             greenCollection[g] += 1;
             redCollection[r] += 1;
-            
-            cout << b << endl;
-            cout << g << endl;
-            cout << r << endl;
-            cout << endl;
         }
     }
     
@@ -185,17 +178,45 @@ void skinBinaryFilter(Mat extractFrame, Mat originalFrame)
     cout << "G Mode: " << greenMode << endl;
     cout << "R Mode: " << redMode << endl;
     
-}
-
-void detectFaces(Mat frame, vector<Rect> &outputFaces)
-{
-    cvtColor(frame, frame, CV_BGR2GRAY);
-    equalizeHist(frame, frame);
+    Vec3b filterPixel = Vec3b(blueMode, greenMode, redMode);
     
-    faceCascade.detectMultiScale(frame, outputFaces, 1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30,30));
+    return filterPixel;
+    
 }
 
-bool withinRange(int val, int min, int max) //efficiently checks whether val is in between min and max
+Mat skinBinaryFilter(Mat originalFrame, int threshold)
+{
+    Mat outputImage(originalFrame.size(), CV_8UC3, Scalar(0,0,0));
+    
+    for (int row = 0; row <= originalFrame.rows; row++) //probably a better method for this
+    {
+        for (int col = 0; col <= originalFrame.cols; col++)
+        {
+            Vec3b originalPixel = originalFrame.at<Vec3b>(row, col);
+            
+            int b = originalPixel[0],
+                g = originalPixel[1],
+                r = originalPixel[2];
+            
+            int minBlueIntensity = testFilterPix[0] - threshold,
+                maxBlueIntensity = testFilterPix[0] + threshold;
+            
+            int minGreenIntensity = testFilterPix[1] - threshold,
+                maxGreenIntensity = testFilterPix[1] + threshold;
+            
+            int minRedIntensity = testFilterPix[2] - threshold,
+                maxRedIntensity = testFilterPix[2] + threshold;
+
+            if (withinRange(b, minBlueIntensity, maxBlueIntensity) &&
+                withinRange(g, minGreenIntensity, maxGreenIntensity) &&
+                withinRange(r, minRedIntensity, maxRedIntensity))
+                outputImage.at<Vec3b>(row, col) = Vec3b(255,255,255);
+        }
+    }
+    return outputImage;
+}
+
+bool withinRange(int val, int min, int max) //used for checking if image pixels are in certain threshold
 {
     return (unsigned)(val - min) <= (max - min);
 }
@@ -207,8 +228,17 @@ int findChannelMax(int colours[])
     
     for (short int intensity = 0; intensity <= 255; intensity++)
     {
-        if (colours[intensity] > maxColourCount)
+        cout << "Intensity: " << intensity << endl;
+        cout << "Occurrences: " << colours[intensity] << endl;
+        
+        if (colours[intensity] > maxColourCount &&
+            intensity != 0 &&
+            intensity != 255)
         {
+            cout << "NEW MOSt-OCCURRING INTENSITY" << endl;
+            cout << colours[intensity] << " is greater than " << maxColourCount << endl;
+            cout << maxIntensity << " is now the most-occurring intensity" << endl;
+            
             maxColourCount = colours[intensity];
             maxIntensity = intensity;
         }

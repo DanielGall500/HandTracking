@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3C2D21E11D4521F9001779F0 /* BinarySkinFilter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3C2D21DF1D4521F9001779F0 /* BinarySkinFilter.cpp */; };
 		3C8C016F1D0EC81200D1408C /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3C8C016E1D0EC81200D1408C /* main.cpp */; };
 /* End PBXBuildFile section */
 
@@ -23,6 +24,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		3C2D21DF1D4521F9001779F0 /* BinarySkinFilter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BinarySkinFilter.cpp; sourceTree = "<group>"; };
+		3C2D21E01D4521F9001779F0 /* BinarySkinFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BinarySkinFilter.h; sourceTree = "<group>"; };
 		3C8C016B1D0EC81200D1408C /* HandTracking */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = HandTracking; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C8C016E1D0EC81200D1408C /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -58,6 +61,8 @@
 			isa = PBXGroup;
 			children = (
 				3C8C016E1D0EC81200D1408C /* main.cpp */,
+				3C2D21DF1D4521F9001779F0 /* BinarySkinFilter.cpp */,
+				3C2D21E01D4521F9001779F0 /* BinarySkinFilter.h */,
 			);
 			path = HandTracking;
 			sourceTree = "<group>";
@@ -119,6 +124,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3C8C016F1D0EC81200D1408C /* main.cpp in Sources */,
+				3C2D21E11D4521F9001779F0 /* BinarySkinFilter.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -285,6 +291,7 @@
 				3C8C01741D0EC81200D1408C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

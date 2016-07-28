@@ -48,7 +48,8 @@ void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> lab
 }
 
 
-Rect extractRectOne, extractRectTwo, extractRectThree, extractRectFour;
+Rect extractRectOne, extractRectTwo, extractRectThree, extractRectFour,
+    extractRectFive, extractRectSix, extractRectSeven;
 
 int main(int argc, const char * argv[]) {
     
@@ -72,7 +73,12 @@ int main(int argc, const char * argv[]) {
     extractRectThree = Rect(Point(wCenter + 50, hCenter + 70), Point(wCenter + 30, hCenter + 50));
     extractRectFour = Rect(Point(wCenter - 50, hCenter + 150), Point(wCenter - 30, hCenter + 130));
     
-    Rect extracts[4] = {extractRectOne, extractRectTwo, extractRectThree, extractRectFour};
+    extractRectFive = Rect(Point(wCenter - 70, hCenter - 120), Point(wCenter - 50, hCenter - 100));
+    extractRectSix = Rect(Point(wCenter + 70, hCenter - 120), Point(wCenter + 50, hCenter - 100));
+    extractRectSeven = Rect(Point(wCenter - 10, hCenter - 150), Point(wCenter + 10, hCenter - 130));
+    
+    Rect extracts[7] = {extractRectOne, extractRectTwo, extractRectThree, extractRectFour,
+                        extractRectFive, extractRectSix, extractRectSeven};
     
     namedWindow("main");
     
@@ -83,6 +89,8 @@ int main(int argc, const char * argv[]) {
         cap >> frame;
         
         frameCounter++;
+
+        rectangle(frame, Point(wCenter - 10, hCenter - 10), Point(wCenter + 10, hCenter + 10), Scalar(255,0,0));
         
         skinFilter.updateFrame(frame);
         

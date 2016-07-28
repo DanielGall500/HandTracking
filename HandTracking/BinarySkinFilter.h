@@ -27,7 +27,7 @@ public:
     
     void updateFrame(cv::Mat &frame) { originalFrame = &frame; }
     
-    void showExtractAreas(cv::Mat &frame, cv::Rect extracts[4]); //YOU SHOULD GIVE EXTRACT OPTIONS TO MAIN
+    void showExtractAreas(cv::Mat &frame, cv::Rect extracts[7]); //YOU SHOULD GIVE EXTRACT OPTIONS TO MAIN
     
     void runExtractCollection(cv::Rect extractRects[7]) { setExtractLocations(extractRects); collectImageExtracts(); };
     
@@ -42,9 +42,12 @@ public:
 private:
     cv::Mat *originalFrame;
     
+    int totalExtracts = 7;
+    
     std::vector<cv::Mat> extractFrameStorage;
     
-    cv::Rect extractRectOne, extractRectTwo, extractRectThree, extractRectFour;
+    cv::Rect extractRectOne, extractRectTwo, extractRectThree, extractRectFour,
+    extractRectFive, extractRectSix, extractRectSeven;
     
     std::vector<cv::Vec3b> filterColours;
     

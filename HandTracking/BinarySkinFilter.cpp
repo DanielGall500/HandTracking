@@ -61,7 +61,10 @@ void BinarySkinFilter::collectImageExtracts()
     Mat tempExtractOne = Mat(*originalFrame, extractRectOne),
         tempExtractTwo = Mat(*originalFrame, extractRectTwo),
         tempExtractThree = Mat(*originalFrame, extractRectThree),
-        tempExtractFour = Mat(*originalFrame, extractRectFour);
+        tempExtractFour = Mat(*originalFrame, extractRectFour),
+        tempExtractFive = Mat(*originalFrame, extractRectFive),
+        tempExtractSix = Mat(*originalFrame, extractRectSix),
+        tempExtractSeven = Mat(*originalFrame, extractRectSeven);
     
     cout << "TEMPEXTRACT" << endl;
     cout << tempExtractOne.at<Vec3b>(0,0) << endl;
@@ -70,6 +73,9 @@ void BinarySkinFilter::collectImageExtracts()
     extractFrameStorage.push_back(tempExtractTwo);
     extractFrameStorage.push_back(tempExtractThree);
     extractFrameStorage.push_back(tempExtractFour);
+    extractFrameStorage.push_back(tempExtractFive);
+    extractFrameStorage.push_back(tempExtractSix);
+    extractFrameStorage.push_back(tempExtractSeven);
 }
 
 Vec3b BinarySkinFilter::findDominantColour(Mat extractFrame)
@@ -164,28 +170,24 @@ bool BinarySkinFilter::withinRange(int val, int min, int max)
     return (unsigned)(val - min) <= (max - min);
 }
 
-void BinarySkinFilter::setExtractLocations(Rect extractRects[4])
+void BinarySkinFilter::setExtractLocations(Rect extractRects[7])
 {
     extractRectOne = extractRects[0]; //need to be kept seperate
     extractRectTwo = extractRects[1];
     extractRectThree = extractRects[2];
     extractRectFour = extractRects[3];
+    extractRectFive = extractRects[4];
+    extractRectSix = extractRects[5];
+    extractRectSeven = extractRects[6];
 }
 
 
-void BinarySkinFilter::showExtractAreas(Mat &frame, Rect extracts[4])
+void BinarySkinFilter::showExtractAreas(Mat &frame, Rect extracts[7])
 {
-    rectangle(frame, extracts[0],
-              Scalar(0,255,0));
-    
-    rectangle(frame, extracts[1],
-              Scalar(0,255,0));
-    
-    rectangle(frame, extracts[2],
-              Scalar(0,255,0));
-    
-    rectangle(frame, extracts[3],
-              Scalar(0,255,0));
+    for (int i = 0; i <= totalExtracts; i++)
+    {
+        rectangle(frame, extracts[i], Scalar(0,255,0));
+    }
 }
 
 Mat BinarySkinFilter::getSummedBinaryImages()

@@ -21,40 +21,32 @@ BinarySkinFilter::~BinarySkinFilter()
     
 }
 
-void BinarySkinFilter::runColourCollection()
+void BinarySkinFilter::runColourCollection(int filterThreshold)
 {
     Vec3b col;
     
-    cout << "Finding Dominant Colours" << endl;
-    
     for(int ext = 0; ext <= extractFrameStorage.size() - 1; ext++)
     {
-        cout << "Extract Num " << ext << endl;
-        
         col = findDominantColour(extractFrameStorage[ext]);
-        
-        cout << "Colour: " << col << endl;
         
         filterColours.push_back(col);
     }
-    cout << "Finished Dominant Colours" << endl;
+    
+    findMinMaxChannels(filterColours, filterThreshold, minB, maxB, minG, maxG, minR, maxR);
 }
 
-void BinarySkinFilter::runBinaryFiltering(Mat &frame, int threshold)
+/*void BinarySkinFilter::runBinaryFiltering(Mat &frame, int threshold)
 {
     Mat img;
     binaryImages.clear();
     
-    cout << "Inside Binary Filter" << endl;
-    
     for (int filt = 0; filt <= filterColours.size() - 1; filt++)
     {
-        cout << "Filter Number " << filt << endl;
-        img = filterImage(filterColours[filt], threshold);
+        img = filterImage();
         
         binaryImages.push_back(img);
     }
-}
+}*/
 
 void BinarySkinFilter::collectImageExtracts()
 {
@@ -65,9 +57,6 @@ void BinarySkinFilter::collectImageExtracts()
         tempExtractFive = Mat(*originalFrame, extractRectFive),
         tempExtractSix = Mat(*originalFrame, extractRectSix),
         tempExtractSeven = Mat(*originalFrame, extractRectSeven);
-    
-    cout << "TEMPEXTRACT" << endl;
-    cout << tempExtractOne.at<Vec3b>(0,0) << endl;
     
     extractFrameStorage.push_back(tempExtractOne);
     extractFrameStorage.push_back(tempExtractTwo);
@@ -99,8 +88,6 @@ Vec3b BinarySkinFilter::findDominantColour(Mat extractFrame)
             blueCollection[b] += 1;
             greenCollection[g] += 1;
             redCollection[r] += 1;
-            
-            cout << "Running Colour Search: R - " << row << " C - " << col << endl;
         }
     }
     
@@ -113,38 +100,56 @@ Vec3b BinarySkinFilter::findDominantColour(Mat extractFrame)
     return filterPixel;
 }
 
-Mat BinarySkinFilter::filterImage(Vec3b &filterChannels, int threshold)
+Mat BinarySkinFilter::runBinaryFiltering()
 {
-    Mat outputImage(originalFrame->size(), CV_8UC3, Scalar(0,0,0));
+    resize(*originalFrame, *originalFrame, Size(320,240), INTER_NEAREST);
     
-    for (int row = 0; row <= originalFrame->rows; row++) //probably a better method for this
+    /*TODO
+     resizing fixed, works great
+     although implement it in the parameters instead and change
+     from original frame, as it could mess up the other functions
+     okay so need to extract info and apply it to bigger image now
+     */
+    
+    Mat outputImage(originalFrame->size(), CV_8UC3, Scalar(0,0,0));
+    Vec3b *rowPixel;
+
+    for (int row = 0; row <= originalFrame->rows; row++)
     {
+        rowPixel = originalFrame->ptr<Vec3b>(row);
+    
         for (int col = 0; col <= originalFrame->cols; col++)
         {
-            Vec3b originalPixel = originalFrame->at<Vec3b>(row, col);
+            int b = rowPixel[col][0],
+                g = rowPixel[col][1],
+                r = rowPixel[col][2];
             
-            int b = originalPixel[0],
-            g = originalPixel[1],
-            r = originalPixel[2];
-            
-            int minBlueIntensity = filterChannels[0] - threshold,
-            maxBlueIntensity = filterChannels[0] + threshold;
-            
-            int minGreenIntensity = filterChannels[1] - threshold,
-            maxGreenIntensity = filterChannels[1] + threshold;
-            
-            int minRedIntensity = filterChannels[2] - threshold,
-            maxRedIntensity = filterChannels[2] + threshold;
-            
-            if (withinRange(b, minBlueIntensity, maxBlueIntensity) &&
-                withinRange(g, minGreenIntensity, maxGreenIntensity) &&
-                withinRange(r, minRedIntensity, maxRedIntensity))
+            if (withinFilterRange(b, g, r))
+            {
                 outputImage.at<Vec3b>(row, col) = Vec3b(255,255,255);
+            }
         }
     }
-    cout << "We got to the end of the fitler method" << endl;
     
     return outputImage;
+}
+
+void BinarySkinFilter::findMinMaxChannels(vector<Vec3b> filter, int thresh,
+                                          vector<int> &minB, vector<int> &maxB,
+                                          vector<int> &minG, vector<int> &maxG,
+                                          vector<int> &minR, vector<int> &maxR)
+{
+    for (int i = 0; i <= filter.size() - 1; i++)
+    {
+        minB.push_back(filter[i][0] - thresh),
+        maxB.push_back(filter[i][0] + thresh);
+        
+        minG.push_back(filter[i][1] - thresh),
+        maxG.push_back(filter[i][1] + thresh);
+        
+        minR.push_back(filter[i][2] - thresh),
+        maxR.push_back(filter[i][2] + thresh);
+    }
 }
 
 int BinarySkinFilter::findChannelMax(int colours[])
@@ -165,9 +170,23 @@ int BinarySkinFilter::findChannelMax(int colours[])
     return maxIntensity;
 }
 
-bool BinarySkinFilter::withinRange(int val, int min, int max)
+bool BinarySkinFilter::withinFilterRange(int b, int g, int r)
 {
-    return (unsigned)(val - min) <= (max - min);
+    bool bPassed = false, gPassed = false, rPassed = false;
+    int f = 0;
+    
+    auto channelInsideRange = [](int channel, int min, int max)
+    { return ((unsigned)(channel - min) <= (max - min)); };
+    
+    while ((!bPassed && !gPassed && !rPassed) && f <= filterColours.size())
+    {
+        bPassed = channelInsideRange(b, minB[f], maxB[f]);
+        gPassed = channelInsideRange(g, minG[f], maxB[f]);
+        rPassed = channelInsideRange(r, minR[f], maxR[f]);
+        
+        f++;
+    }
+    return (bPassed && gPassed && rPassed);
 }
 
 void BinarySkinFilter::setExtractLocations(Rect extractRects[7])
@@ -182,14 +201,15 @@ void BinarySkinFilter::setExtractLocations(Rect extractRects[7])
 }
 
 
-void BinarySkinFilter::showExtractAreas(Mat &frame, Rect extracts[7])
+void BinarySkinFilter::showExtractAreas(Mat frame, Rect extracts[7], Scalar colour)
 {
     for (int i = 0; i <= totalExtracts; i++)
     {
-        rectangle(frame, extracts[i], Scalar(0,255,0));
+        rectangle(frame, extracts[i], colour);
     }
 }
 
+/*
 Mat BinarySkinFilter::getSummedBinaryImages()
 {
     Mat summedImage = Mat(binaryImages[0].rows, binaryImages[0].cols, binaryImages[0].type(), double(0));
@@ -199,8 +219,10 @@ Mat BinarySkinFilter::getSummedBinaryImages()
         add(summedImage, binaryImages[img], summedImage);
     }
     
+    medianBlur(summedImage, summedImage, 7);
+    
     return summedImage;
-}
+}*/
 
 
 

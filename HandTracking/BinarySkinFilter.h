@@ -27,17 +27,13 @@ public:
     
     void updateFrame(cv::Mat &frame) { originalFrame = &frame; }
     
-    void showExtractAreas(cv::Mat &frame, cv::Rect extracts[7]); //YOU SHOULD GIVE EXTRACT OPTIONS TO MAIN
+    void showExtractAreas(cv::Mat frame, cv::Rect extracts[7], cv::Scalar colour);
     
     void runExtractCollection(cv::Rect extractRects[7]) { setExtractLocations(extractRects); collectImageExtracts(); };
     
-    void runColourCollection();
+    void runColourCollection(int filterThreshold);
     
-    void runBinaryFiltering(cv::Mat &frame, int threshold);
-    
-    cv::Mat getSummedBinaryImages();
-    
-    std::vector<cv::Mat> getBinaryImages() { return binaryImages; }
+    cv::Mat runBinaryFiltering();
     
 private:
     cv::Mat *originalFrame;
@@ -53,22 +49,20 @@ private:
     
     cv::Vec3b findDominantColour(cv::Mat extractFrame);
     
-    cv::Mat filterImage(cv::Vec3b &filterChannels, int threshold);
-    
-    std::vector<cv::Mat> binaryImages;
-    
     void setExtractLocations(cv::Rect extractRects[7]);
     void collectImageExtracts();
     
+    std::vector<int> minB, maxB, minG, maxG, minR, maxR;
+    
+    void findMinMaxChannels(std::vector<cv::Vec3b> filter, int thresh,
+                            std::vector<int> &minB, std::vector<int> &maxB,
+                            std::vector<int> &minG, std::vector<int> &maxG,
+                            std::vector<int> &minR, std::vector<int> &maxR);
+    
     int findChannelMax(int colours[]);
-    bool withinRange(int val, int min, int max);
+    bool withinFilterRange(int b, int g, int r);
     
 };
-
-
-
-
-
 
 
 #endif /* defined(__HandTracking__BinarySkinFilter__) */

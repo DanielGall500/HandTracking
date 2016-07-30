@@ -16,7 +16,7 @@
 #include <string.h>
 #include <sstream>
 #include <fstream>
-#include <map>
+#include <time.h>
 
 using namespace cv;
 using namespace std;
@@ -82,6 +82,8 @@ int main(int argc, const char * argv[]) {
     
     namedWindow("main");
     
+    Scalar boxColour(0,255,0);
+    
     while (true)
     {
         Mat frame;
@@ -89,35 +91,61 @@ int main(int argc, const char * argv[]) {
         cap >> frame;
         
         frameCounter++;
-
-        rectangle(frame, Point(wCenter - 10, hCenter - 10), Point(wCenter + 10, hCenter + 10), Scalar(255,0,0));
+        
+        clock_t start, end;
+        start = clock();
         
         skinFilter.updateFrame(frame);
         
-        skinFilter.showExtractAreas(frame, extracts);
-
+        skinFilter.showExtractAreas(frame, extracts, boxColour);
+        
+        /*
+         Speed of before optimization:
+         Speed of program: 0.379313 second(s)
+         Speed of program: 0.304982 second(s)
+         Speed of program: 0.306485 second(s)
+         Speed of program: 0.306367 second(s)
+         Speed of program: 0.294823 second(s)
+         Speed of program: 0.308851 second(s)
+         Speed of program: 0.29538 second(s)
+         Speed of program: 0.299404 second(s)
+         Speed of program: 0.295455 second(s)
+         Speed of program: 0.304174 second(s)
+         Speed of program: 0.308579 second(s)
+         Speed of program: 0.309152 second(s)
+         Speed of program: 0.306726 second(s)
+         Speed of program: 0.298693 second(s)
+         Speed of program: 0.297937 second(s)
+         Speed of program: 0.314955 second(s)
+         */
         
         if (frameCounter == 48)
         {
-            cout << "Running Colour Collection" << endl;
+            cout << "Extracting Colour" << endl;
             
             skinFilter.runExtractCollection(extracts);
             
-            skinFilter.runColourCollection();
+            skinFilter.runColourCollection(threshold);
+            
+            boxColour = Scalar(0,0,255);
         }
         
         if (frameCounter >= 50)
         {
-            cout << "Frame >50" << endl;
-            
-            skinFilter.runBinaryFiltering(frame, threshold);
+            //Mat resizedFrame;
+            //resize(frame, resizedFrame, Size(320,240));
         
-            vector<Mat> binaryImgs = skinFilter.getBinaryImages();
+            Mat filtImg = skinFilter.runBinaryFiltering();
             
-            Mat summedBinaryImg = skinFilter.getSummedBinaryImages();
+            imshow("Filtered", filtImg);
             
-            imshow("Filtered", summedBinaryImg);
         }
+        
+        end = clock();
+        double speedPerSec = double(end - start) / double(CLOCKS_PER_SEC);
+        
+        if (frameCounter % 10 == 0)
+            cout << "Speed of program: " << double(speedPerSec) << " second(s)" << endl;
         
         if(waitKey(30) > 0)
             return -1;

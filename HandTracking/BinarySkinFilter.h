@@ -33,7 +33,7 @@ public:
     
     void runColourCollection(int filterThreshold);
     
-    cv::Mat runBinaryFiltering();
+    cv::Mat runBinaryFiltering(cv::Mat frame);
     
 private:
     cv::Mat *originalFrame;

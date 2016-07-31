@@ -7,14 +7,14 @@
 	<key>IDESourceControlProjectIdentifier</key>
 	<string>DA0337C0-9491-4357-9899-E1ABCF4DDF9A</string>
 	<key>IDESourceControlProjectName</key>
-	<string>project</string>
+	<string>HandTracking</string>
 	<key>IDESourceControlProjectOriginsDictionary</key>
 	<dict>
 		<key>E1F39DA2BDE73EC51344270FA6CF025BFA407502</key>
 		<string>https://github.com/DannyGotTea/HandTracking.git</string>
 	</dict>
 	<key>IDESourceControlProjectPath</key>
-	<string>HandTracking.xcodeproj/project.xcworkspace</string>
+	<string>HandTracking.xcodeproj</string>
 	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
 	<dict>
 		<key>E1F39DA2BDE73EC51344270FA6CF025BFA407502</key>

@@ -21,6 +21,8 @@
 using namespace cv;
 using namespace std;
 
+Mat findFingers(Mat binaryHand);
+
 void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> labels, char seperator = ';')
 {
     std::stringstream fileStream(imgs_filename.c_str(), ifstream::in);
@@ -46,7 +48,6 @@ void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> lab
     }
     
 }
-
 
 Rect extractRectOne, extractRectTwo, extractRectThree, extractRectFour,
     extractRectFive, extractRectSix, extractRectSeven;
@@ -99,30 +100,8 @@ int main(int argc, const char * argv[]) {
         
         skinFilter.showExtractAreas(frame, extracts, boxColour);
         
-        /*
-         Speed of before optimization:
-         Speed of program: 0.379313 second(s)
-         Speed of program: 0.304982 second(s)
-         Speed of program: 0.306485 second(s)
-         Speed of program: 0.306367 second(s)
-         Speed of program: 0.294823 second(s)
-         Speed of program: 0.308851 second(s)
-         Speed of program: 0.29538 second(s)
-         Speed of program: 0.299404 second(s)
-         Speed of program: 0.295455 second(s)
-         Speed of program: 0.304174 second(s)
-         Speed of program: 0.308579 second(s)
-         Speed of program: 0.309152 second(s)
-         Speed of program: 0.306726 second(s)
-         Speed of program: 0.298693 second(s)
-         Speed of program: 0.297937 second(s)
-         Speed of program: 0.314955 second(s)
-         */
-        
         if (frameCounter == 48)
         {
-            cout << "Extracting Colour" << endl;
-            
             skinFilter.runExtractCollection(extracts);
             
             skinFilter.runColourCollection(threshold);
@@ -132,13 +111,18 @@ int main(int argc, const char * argv[]) {
         
         if (frameCounter >= 50)
         {
-            //Mat resizedFrame;
-            //resize(frame, resizedFrame, Size(320,240));
+            Mat resizedFrame;
+            resize(frame, resizedFrame, Size(320,240), INTER_NEAREST);
         
-            Mat filtImg = skinFilter.runBinaryFiltering();
+            Mat binaryImage = skinFilter.runBinaryFiltering(resizedFrame);
             
-            imshow("Filtered", filtImg);
+            imshow("main", binaryImage);
             
+            Mat contours = findFingers(binaryImage);
+            
+            imshow("main", contours);
+            
+            continue;
         }
         
         end = clock();
@@ -155,6 +139,27 @@ int main(int argc, const char * argv[]) {
     
     return 0;
 }
+
+Mat findFingers(Mat binaryHand)
+{
+    cvtColor(binaryHand, binaryHand, CV_BGR2GRAY);
+    
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    
+    findContours(binaryHand, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
+    
+    Mat contourImg = Mat::zeros(binaryHand.rows, binaryHand.cols, CV_8UC3);
+    
+    for (int i = 0; i < contours.size(); i++)
+    {
+        drawContours(contourImg, contours, i, Scalar(0,255,0));
+    }
+    
+    return contourImg;
+}
+
+
 
 
 

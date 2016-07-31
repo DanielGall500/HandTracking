@@ -35,19 +35,6 @@ void BinarySkinFilter::runColourCollection(int filterThreshold)
     findMinMaxChannels(filterColours, filterThreshold, minB, maxB, minG, maxG, minR, maxR);
 }
 
-/*void BinarySkinFilter::runBinaryFiltering(Mat &frame, int threshold)
-{
-    Mat img;
-    binaryImages.clear();
-    
-    for (int filt = 0; filt <= filterColours.size() - 1; filt++)
-    {
-        img = filterImage();
-        
-        binaryImages.push_back(img);
-    }
-}*/
-
 void BinarySkinFilter::collectImageExtracts()
 {
     Mat tempExtractOne = Mat(*originalFrame, extractRectOne),
@@ -100,37 +87,25 @@ Vec3b BinarySkinFilter::findDominantColour(Mat extractFrame)
     return filterPixel;
 }
 
-Mat BinarySkinFilter::runBinaryFiltering()
+Mat BinarySkinFilter::runBinaryFiltering(Mat frame)
 {
-    resize(*originalFrame, *originalFrame, Size(320,240), INTER_NEAREST);
-    
-    /*TODO
-     resizing fixed, works great
-     although implement it in the parameters instead and change
-     from original frame, as it could mess up the other functions
-     okay so need to extract info and apply it to bigger image now
-     */
-    
-    Mat outputImage(originalFrame->size(), CV_8UC3, Scalar(0,0,0));
+    Mat outputImage(frame.size(), CV_8UC3, Scalar(0,0,0));
     Vec3b *rowPixel;
 
-    for (int row = 0; row <= originalFrame->rows; row++)
+    for (int row = 0; row <= frame.rows; row++)
     {
-        rowPixel = originalFrame->ptr<Vec3b>(row);
+        rowPixel = frame.ptr<Vec3b>(row);
     
-        for (int col = 0; col <= originalFrame->cols; col++)
+        for (int col = 0; col <= frame.cols; col++)
         {
             int b = rowPixel[col][0],
                 g = rowPixel[col][1],
                 r = rowPixel[col][2];
             
             if (withinFilterRange(b, g, r))
-            {
                 outputImage.at<Vec3b>(row, col) = Vec3b(255,255,255);
-            }
         }
     }
-    
     return outputImage;
 }
 
@@ -170,19 +145,24 @@ int BinarySkinFilter::findChannelMax(int colours[])
     return maxIntensity;
 }
 
-bool BinarySkinFilter::withinFilterRange(int b, int g, int r)
+bool BinarySkinFilter::withinFilterRange(int b, int g, int r) //need to comment this badly
 {
     bool bPassed = false, gPassed = false, rPassed = false;
     int f = 0;
     
-    auto channelInsideRange = [](int channel, int min, int max)
-    { return ((unsigned)(channel - min) <= (max - min)); };
+    auto channelInsideRange = [](int channel, int min, int max, bool passedCheck)
+    {
+        if (!passedCheck)
+            return ((unsigned)(channel - min) <= (max - min));
+        else
+            return true;
+    };
     
     while ((!bPassed && !gPassed && !rPassed) && f <= filterColours.size())
     {
-        bPassed = channelInsideRange(b, minB[f], maxB[f]);
-        gPassed = channelInsideRange(g, minG[f], maxB[f]);
-        rPassed = channelInsideRange(r, minR[f], maxR[f]);
+        bPassed = channelInsideRange(b, minB[f], maxB[f], bPassed);
+        gPassed = channelInsideRange(g, minG[f], maxB[f], gPassed);
+        rPassed = channelInsideRange(r, minR[f], maxR[f], rPassed);
         
         f++;
     }
@@ -208,22 +188,6 @@ void BinarySkinFilter::showExtractAreas(Mat frame, Rect extracts[7], Scalar colo
         rectangle(frame, extracts[i], colour);
     }
 }
-
-/*
-Mat BinarySkinFilter::getSummedBinaryImages()
-{
-    Mat summedImage = Mat(binaryImages[0].rows, binaryImages[0].cols, binaryImages[0].type(), double(0));
-    
-    for (int img = 0; img <= binaryImages.size() - 1; img++)
-    {        
-        add(summedImage, binaryImages[img], summedImage);
-    }
-    
-    medianBlur(summedImage, summedImage, 7);
-    
-    return summedImage;
-}*/
-
 
 
 

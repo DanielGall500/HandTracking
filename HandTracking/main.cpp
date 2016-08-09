@@ -17,16 +17,27 @@
 #include <sstream>
 #include <fstream>
 #include <time.h>
+#include <vector>
+#include <algorithm>
 
 using namespace cv;
 using namespace std;
 
 Mat findFingers(Mat binaryHand);
+Mat drawLargestDefect(Mat frame, vector<vector<Vec4i>> defects, vector<vector<Point>> contours);
+vector<vector<Point>> getNMaxContours(vector<vector<Point>> contours, int n);
+
 void findHandProperties(Mat binaryHand,
                         vector<vector<Point>> &outputContours,
                         vector<vector<Point>> &outputHull,
                         vector<vector<int>> &hullInts,
-                        vector<vector<Vec4i>> &outputDefects);
+                        vector<vector<Vec4i>> &outputDefects,
+                        int topNContours);
+
+bool operator < (vector<Point> c1, vector<Point> c2)
+{
+    return contourArea(c1) < contourArea(c2);
+}
 
 void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> labels, char seperator = ';')
 {
@@ -129,9 +140,14 @@ int main(int argc, const char * argv[]) {
             vector<vector<int>> handHullInts;
             vector<vector<Vec4i>> handDefects;
             
-            findHandProperties(binaryImage, handContours, handHullPoints, handHullInts, handDefects);
+            int topNContours = 2;
+            
+            findHandProperties(binaryImage, handContours, handHullPoints, handHullInts, handDefects, topNContours);
+            
+            Mat convexityDefects = drawLargestDefect(binaryImage, handDefects, handContours);
             
             imshow("enclosedHand", binaryImage);
+            imshow("defects", convexityDefects);
             
             continue;
         }
@@ -155,37 +171,53 @@ void findHandProperties(Mat binaryImage,
                         vector<vector<Point>> &outputContours,
                         vector<vector<Point>> &outputHull,
                         vector<vector<int>> &outputHullInts,
-                        vector<vector<Vec4i>> &outputDefects)
+                        vector<vector<Vec4i>> &outputDefects,
+                        int topNContours)
 {
     Mat editedImg;
-    Mat handContourImg = Mat::zeros(binaryImage.rows, binaryImage.cols, CV_8UC3),
-    handConvexityDefects = Mat::zeros(binaryImage.rows, binaryImage.cols, CV_8UC3);
+    Mat handContourImg = Mat::zeros(binaryImage.rows, binaryImage.cols, CV_8UC3);
     
     cvtColor(binaryImage, editedImg, CV_BGR2GRAY);
     
     vector<vector<Point>> contours;
+    vector<vector<Point>> maxContours;
     vector<Vec4i> hierarchy;
     
-    findContours(editedImg, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
+    int numMaxContours = 1;
     
-    vector<vector<Point>> hull(contours.size());
-    vector<vector<int>> hullInts(contours.size());
-    vector<vector<Vec4i>> defects(contours.size());
+    findContours(editedImg, contours, hierarchy, CV_RETR_TREE,
+                 CV_CHAIN_APPROX_SIMPLE, Point(0,0));
     
-    for (int i = 0; i < contours.size(); i++)
+    maxContours = getNMaxContours(contours, numMaxContours);
+    
+    vector<vector<Point>> hull(maxContours.size());
+    vector<vector<int>> hullInts(maxContours.size());
+    vector<vector<Vec4i>> defects(maxContours.size());
+    
+    for (int i = 0; i < maxContours.size(); i++)
     {
-        convexHull(contours[i], hull[i], false);
-        convexHull(contours[i], hullInts[i], false);
+        convexHull(maxContours[i], hull[i], false);
+        convexHull(maxContours[i], hullInts[i], false);
         
         if (hullInts[i].size() > 3)
         {
-            convexityDefects(contours[i], hullInts[i], defects[i]);
+            convexityDefects(maxContours[i], hullInts[i], defects[i]);
         }
         
         drawContours(handContourImg, hull, i, Scalar(255,255,0));
     }
     
-    //find largest
+    outputContours = maxContours;
+    outputHull = hull;
+    outputHullInts = hullInts;
+    outputDefects = defects;
+
+}
+
+Mat drawLargestDefect(Mat frame, vector<vector<Vec4i>> defects, vector<vector<Point>> contours)
+{
+    Mat handConvexityDefects = Mat::zeros(frame.rows, frame.cols, CV_8UC3);
+    
     int defIdx = 0;
     int maxArea = 0;
     
@@ -198,7 +230,7 @@ void findHandProperties(Mat binaryImage,
             defIdx = i;
         }
     }
-  
+    
     for (int i = 0; i < defects[defIdx].size(); i++)
     {
         Vec4i& v = defects[defIdx][i];
@@ -217,6 +249,8 @@ void findHandProperties(Mat binaryImage,
             
             Scalar defectCol(0,0,255);
             
+            cout << "Point: " << ptFar << endl;
+            
             line(handConvexityDefects, ptStart, ptEnd, defectCol, 1);
             line(handConvexityDefects, ptStart, ptFar, defectCol, 1);
             line(handConvexityDefects, ptEnd, ptFar, defectCol, 1);
@@ -224,12 +258,36 @@ void findHandProperties(Mat binaryImage,
             
         }
     }
-    outputContours = contours;
-    outputHull = hull;
-    outputHullInts = hullInts;
-    outputDefects = defects;
-
+    return handConvexityDefects;
 }
+
+vector<vector<Point>> getNMaxContours(vector<vector<Point>> contours, int n)
+{
+    vector<vector<Point>> nContours;
+    vector<double> contourAreas;
+    
+    for (int i = 0; i <= contours.size(); i++)
+    {
+        double area = contourArea(contours[i]);
+        contourAreas.push_back(area);
+    }
+    
+    for (int i = 0; i < n; i++)
+    {
+        vector<double>::iterator result;
+        
+        result = max_element(contourAreas.begin(), contourAreas.end());
+        
+        float position = std::distance(contourAreas.begin(), result);
+        
+        nContours.push_back(contours[position]);
+        contours.erase(contours.begin() + position);
+    }
+    
+    return nContours;
+}
+
+
 
 
 

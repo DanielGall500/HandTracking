@@ -19,13 +19,18 @@
 #include <time.h>
 #include <vector>
 #include <algorithm>
+#include <math.h>
 
 using namespace cv;
 using namespace std;
 
 Mat findFingers(Mat binaryHand);
-Mat drawLargestDefect(Mat frame, vector<vector<Vec4i>> defects, vector<vector<Point>> contours);
+Mat drawDefects(Mat frame, vector<vector<Vec4i>> defects, vector<vector<Point>> contours);
 vector<vector<Point>> getNMaxContours(vector<vector<Point>> contours, int n);
+
+vector<vector<Vec4i>> dismissNonFingerDefects(vector<vector<Vec4i>> defects,
+                                        vector<vector<Point>> contours,
+                                        float angleThresh);
 
 void findHandProperties(Mat binaryHand,
                         vector<vector<Point>> &outputContours,
@@ -77,7 +82,7 @@ int main(int argc, const char * argv[]) {
         return -1;
     
     BinarySkinFilter skinFilter;
-    int threshold = 25;
+    int threshold = 15;
     
     Mat firstFrame;
     cap >> firstFrame;
@@ -144,10 +149,14 @@ int main(int argc, const char * argv[]) {
             
             findHandProperties(binaryImage, handContours, handHullPoints, handHullInts, handDefects, topNContours);
             
-            Mat convexityDefects = drawLargestDefect(binaryImage, handDefects, handContours);
+            vector<vector<Vec4i>> cleanDefects = dismissNonFingerDefects(handDefects, handContours, 80);
+            
+            Mat fullDefectsImg = drawDefects(binaryImage, handDefects, handContours);
+            Mat cleanDefectsImg = drawDefects(binaryImage, cleanDefects, handContours);
             
             imshow("enclosedHand", binaryImage);
-            imshow("defects", convexityDefects);
+            imshow("defects", fullDefectsImg);
+            imshow("cleaned defects", cleanDefectsImg);
             
             continue;
         }
@@ -161,7 +170,7 @@ int main(int argc, const char * argv[]) {
         if(waitKey(30) > 0)
             return -1;
         
-        imshow("main", frame);
+       // imshow("main", frame);
     }
     
     return 0;
@@ -214,59 +223,12 @@ void findHandProperties(Mat binaryImage,
 
 }
 
-Mat drawLargestDefect(Mat frame, vector<vector<Vec4i>> defects, vector<vector<Point>> contours)
-{
-    Mat handConvexityDefects = Mat::zeros(frame.rows, frame.cols, CV_8UC3);
-    
-    int defIdx = 0;
-    int maxArea = 0;
-    
-    for (int i = 0; i < contours.size(); i++)
-    {
-        double a = contourArea(contours[i]);
-        if (a > maxArea)
-        {
-            maxArea = a;
-            defIdx = i;
-        }
-    }
-    
-    for (int i = 0; i < defects[defIdx].size(); i++)
-    {
-        Vec4i& v = defects[defIdx][i];
-        
-        float depth = v[3] / 256;
-        if (depth > 10)
-        {
-            int startIdx = v[0];
-            Point ptStart(contours[defIdx][startIdx]);
-            
-            int farIdx = v[1];
-            Point ptFar(contours[defIdx][farIdx]);
-            
-            int endIdx = v[2];
-            Point ptEnd(contours[defIdx][endIdx]);
-            
-            Scalar defectCol(0,0,255);
-            
-            cout << "Point: " << ptFar << endl;
-            
-            line(handConvexityDefects, ptStart, ptEnd, defectCol, 1);
-            line(handConvexityDefects, ptStart, ptFar, defectCol, 1);
-            line(handConvexityDefects, ptEnd, ptFar, defectCol, 1);
-            circle(handConvexityDefects, ptFar, 4, defectCol, 2);
-            
-        }
-    }
-    return handConvexityDefects;
-}
-
 vector<vector<Point>> getNMaxContours(vector<vector<Point>> contours, int n)
 {
     vector<vector<Point>> nContours;
     vector<double> contourAreas;
     
-    for (int i = 0; i <= contours.size(); i++)
+    for (int i = 0; i < contours.size(); i++)
     {
         double area = contourArea(contours[i]);
         contourAreas.push_back(area);
@@ -286,6 +248,104 @@ vector<vector<Point>> getNMaxContours(vector<vector<Point>> contours, int n)
     
     return nContours;
 }
+
+Mat drawDefects(Mat frame, vector<vector<Vec4i>> defects, vector<vector<Point>> contours)
+{
+    Mat handConvexityDefects = Mat::zeros(frame.rows, frame.cols, CV_8UC3);
+    
+    for (int defIdx = 0; defIdx < contours.size(); defIdx++)
+    {
+        for (int i = 0; i < defects[defIdx].size(); i++)
+        {
+            Vec4i& v = defects[defIdx][i];
+            
+            float depth = v[3] / 256;
+            if (depth > 10)
+            {
+                int startIdx = v[0];
+                Point ptStart(contours[defIdx][startIdx]);
+                
+                int farIdx = v[1];
+                Point ptFar(contours[defIdx][farIdx]);
+                
+                int endIdx = v[2];
+                Point ptEnd(contours[defIdx][endIdx]);
+                
+                Scalar defectCol(0,0,255);
+                
+                line(handConvexityDefects, ptStart, ptEnd, Scalar(255,0,0), 1); //blue
+                line(handConvexityDefects, ptStart, ptFar, Scalar(0,255,0), 1); //green
+                line(handConvexityDefects, ptEnd, ptFar, Scalar(0,0,255), 1); //red
+                circle(handConvexityDefects, ptFar, 4, Scalar(255,255,255), 2); //white
+                
+            }
+        }
+    }
+    
+    return handConvexityDefects;
+}
+
+vector<vector<Vec4i>> dismissNonFingerDefects(vector<vector<Vec4i>> defects, vector<vector<Point>> contours, float angleThresh)
+{
+    vector<vector<Vec4i>> passedDefects;
+    
+    auto findSlope = [] (Point pt1, Point pt2)
+    {
+        float slope;
+        
+        int yDist = pt2.y - pt1.y;
+        int xDist = pt2.x - pt1.x;
+        
+        // make sure we don't divide by zero
+        // for the slope as makes hardware implode
+        
+        if (xDist == 0 || yDist == 0)
+            slope = 0;
+        else
+            slope = yDist / xDist;
+        
+        return slope;
+    };
+    
+    for (int idx = 0; idx < contours.size(); idx++)
+    {
+        cout << "Idx: " << idx << endl;
+        
+        vector<Vec4i> subDefects;
+        
+        for (int i = 0; i < defects[idx].size(); i++)
+        {
+            Vec4i defect = defects[idx][i];
+            
+            cout << "i: " << i << endl;
+            
+            int startIdx = defect[0],
+                farIdx = defect[1],
+                endIdx = defect[2];
+            
+            cout << "StartIdx: " << startIdx << endl;
+            cout << "EndIdx: " << endIdx << endl;
+            cout << "FarIdx: " << farIdx << endl;
+            
+            Point ptStart(contours[idx][startIdx]),
+                  ptFar(contours[idx][farIdx]),
+                  ptEnd(contours[idx][endIdx]);
+            
+            float startEndSlp = findSlope(ptStart, ptEnd), //blue slope 1
+                  startFarSlp = findSlope(ptStart, ptFar), //green
+                  endFarSlp = findSlope(ptEnd, ptFar); //red slope 2
+            
+            float commonAngle = atan((startEndSlp + endFarSlp) / (1 - startEndSlp * endFarSlp)); //find angle between two slopes
+            
+            if (commonAngle <= angleThresh)
+                subDefects.push_back(defect);
+        }
+        passedDefects.push_back(subDefects);
+    }
+    
+    return passedDefects;
+}
+
 
 
 

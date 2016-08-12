@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		3C2D21E11D4521F9001779F0 /* BinarySkinFilter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3C2D21DF1D4521F9001779F0 /* BinarySkinFilter.cpp */; };
 		3C8C016F1D0EC81200D1408C /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3C8C016E1D0EC81200D1408C /* main.cpp */; };
+		3CF2311D1D5C816300A1428C /* HandElementContainer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CF2311B1D5C816300A1428C /* HandElementContainer.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,6 +29,8 @@
 		3C2D21E01D4521F9001779F0 /* BinarySkinFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BinarySkinFilter.h; sourceTree = "<group>"; };
 		3C8C016B1D0EC81200D1408C /* HandTracking */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = HandTracking; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C8C016E1D0EC81200D1408C /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		3CF2311B1D5C816300A1428C /* HandElementContainer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HandElementContainer.cpp; sourceTree = "<group>"; };
+		3CF2311C1D5C816300A1428C /* HandElementContainer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HandElementContainer.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +66,8 @@
 				3C8C016E1D0EC81200D1408C /* main.cpp */,
 				3C2D21DF1D4521F9001779F0 /* BinarySkinFilter.cpp */,
 				3C2D21E01D4521F9001779F0 /* BinarySkinFilter.h */,
+				3CF2311B1D5C816300A1428C /* HandElementContainer.cpp */,
+				3CF2311C1D5C816300A1428C /* HandElementContainer.h */,
 			);
 			path = HandTracking;
 			sourceTree = "<group>";
@@ -125,6 +130,7 @@
 			files = (
 				3C8C016F1D0EC81200D1408C /* main.cpp in Sources */,
 				3C2D21E11D4521F9001779F0 /* BinarySkinFilter.cpp in Sources */,
+				3CF2311D1D5C816300A1428C /* HandElementContainer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

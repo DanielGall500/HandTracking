@@ -11,6 +11,7 @@
 #include "opencv2/objdetect/objdetect.hpp"
 
 #include "BinarySkinFilter.h"
+#include "HandElementContainer.h"
 
 #include <iostream>
 #include <string.h>
@@ -24,7 +25,6 @@
 using namespace cv;
 using namespace std;
 
-Mat findFingers(Mat binaryHand);
 Mat drawDefects(Mat frame, vector<vector<Vec4i>> defects, vector<vector<Point>> contours);
 vector<vector<Point>> getNMaxContours(vector<vector<Point>> contours, int n);
 
@@ -32,7 +32,7 @@ vector<vector<Vec4i>> dismissNonFingerDefects(vector<vector<Vec4i>> defects,
                                         vector<vector<Point>> contours,
                                         float angleThresh);
 
-void findHandProperties(Mat binaryHand,
+void findHandProperties(Mat binaryImage,
                         vector<vector<Point>> &outputContours,
                         vector<vector<Point>> &outputHull,
                         vector<vector<int>> &hullInts,
@@ -84,6 +84,8 @@ int main(int argc, const char * argv[]) {
     BinarySkinFilter skinFilter;
     int threshold = 15;
     
+    HandElementContainer handElements;
+    
     Mat firstFrame;
     cap >> firstFrame;
     
@@ -98,6 +100,7 @@ int main(int argc, const char * argv[]) {
     extractRectFive = Rect(Point(wCenter - 70, hCenter - 120), Point(wCenter - 50, hCenter - 100));
     extractRectSix = Rect(Point(wCenter + 70, hCenter - 120), Point(wCenter + 50, hCenter - 100));
     extractRectSeven = Rect(Point(wCenter - 10, hCenter - 150), Point(wCenter + 10, hCenter - 130));
+
     
     Rect extracts[7] = {extractRectOne, extractRectTwo, extractRectThree, extractRectFour,
                         extractRectFive, extractRectSix, extractRectSeven};
@@ -147,16 +150,19 @@ int main(int argc, const char * argv[]) {
             
             int topNContours = 2;
             
-            findHandProperties(binaryImage, handContours, handHullPoints, handHullInts, handDefects, topNContours);
+            //findHandProperties(binaryImage, handContours, handHullPoints, handHullInts, handDefects, topNContours);
             
-            vector<vector<Vec4i>> cleanDefects = dismissNonFingerDefects(handDefects, handContours, 80);
+            handElements.findHandProperties(binaryImage, handContours, handHullPoints,
+                                            handHullInts, handDefects, topNContours);
             
-            Mat fullDefectsImg = drawDefects(binaryImage, handDefects, handContours);
-            Mat cleanDefectsImg = drawDefects(binaryImage, cleanDefects, handContours);
+           // Mat fullDefectsImg = drawDefects(binaryImage, handDefects, handContours);
+            
+            handElements.dismissIrrelevantDefects(handDefects, handContours, 90);
+            
+            Mat defectsImg = handElements.drawDefects(binaryImage, handDefects, handContours);
             
             imshow("enclosedHand", binaryImage);
-            imshow("defects", fullDefectsImg);
-            imshow("cleaned defects", cleanDefectsImg);
+            imshow("defects", defectsImg);
             
             continue;
         }
@@ -170,7 +176,7 @@ int main(int argc, const char * argv[]) {
         if(waitKey(30) > 0)
             return -1;
         
-       // imshow("main", frame);
+        imshow("main", frame);
     }
     
     return 0;
@@ -309,23 +315,15 @@ vector<vector<Vec4i>> dismissNonFingerDefects(vector<vector<Vec4i>> defects, vec
     
     for (int idx = 0; idx < contours.size(); idx++)
     {
-        cout << "Idx: " << idx << endl;
-        
         vector<Vec4i> subDefects;
         
         for (int i = 0; i < defects[idx].size(); i++)
         {
             Vec4i defect = defects[idx][i];
             
-            cout << "i: " << i << endl;
-            
             int startIdx = defect[0],
                 farIdx = defect[1],
                 endIdx = defect[2];
-            
-            cout << "StartIdx: " << startIdx << endl;
-            cout << "EndIdx: " << endIdx << endl;
-            cout << "FarIdx: " << farIdx << endl;
             
             Point ptStart(contours[idx][startIdx]),
                   ptFar(contours[idx][farIdx]),

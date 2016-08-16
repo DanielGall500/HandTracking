@@ -14,6 +14,7 @@
 #include "opencv2/objdetect/objdetect.hpp"
 
 #include <stdio.h>
+#include <iostream>
 
 using namespace cv;
 using namespace std;
@@ -33,7 +34,8 @@ public:
                             VVPoints &outputHull, VVInts &hullInts,
                             VVVec4i &outputDefects, int topNContours = 1);
     
-    void dismissIrrelevantDefects(VVVec4i &defects, VVPoints contours, float angleThresh);
+    void dismissIrrelevantDefects(VVVec4i &defects, VVPoints contours,
+                                  float angleThresh, vector<int> &fingerAngles);
 
     Mat drawDefects(Mat frame, VVVec4i defects, VVPoints contours);
     

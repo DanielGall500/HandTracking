@@ -35,25 +35,6 @@ void BinarySkinFilter::runColourCollection(int filterThreshold)
     findMinMaxChannels(filterColours, filterThreshold, minB, maxB, minG, maxG, minR, maxR);
 }
 
-void BinarySkinFilter::collectImageExtracts()
-{
-    Mat tempExtractOne = Mat(*originalFrame, extractRectOne),
-        tempExtractTwo = Mat(*originalFrame, extractRectTwo),
-        tempExtractThree = Mat(*originalFrame, extractRectThree),
-        tempExtractFour = Mat(*originalFrame, extractRectFour),
-        tempExtractFive = Mat(*originalFrame, extractRectFive),
-        tempExtractSix = Mat(*originalFrame, extractRectSix),
-        tempExtractSeven = Mat(*originalFrame, extractRectSeven);
-    
-    extractFrameStorage.push_back(tempExtractOne);
-    extractFrameStorage.push_back(tempExtractTwo);
-    extractFrameStorage.push_back(tempExtractThree);
-    extractFrameStorage.push_back(tempExtractFour);
-    extractFrameStorage.push_back(tempExtractFive);
-    extractFrameStorage.push_back(tempExtractSix);
-    extractFrameStorage.push_back(tempExtractSeven);
-}
-
 Vec3b BinarySkinFilter::findDominantColour(Mat extractFrame)
 {
     int blueCollection[255] = {0},
@@ -106,6 +87,9 @@ Mat BinarySkinFilter::runBinaryFiltering(Mat frame)
                 outputImage.at<Vec3b>(row, col) = Vec3b(255,255,255);
         }
     }
+    
+    medianBlur(outputImage, outputImage, 7);
+    
     return outputImage;
 }
 
@@ -189,6 +173,24 @@ void BinarySkinFilter::showExtractAreas(Mat frame, Rect extracts[7], Scalar colo
     }
 }
 
+void BinarySkinFilter::collectImageExtracts()
+{
+    Mat tempExtractOne = Mat(*originalFrame, extractRectOne),
+    tempExtractTwo = Mat(*originalFrame, extractRectTwo),
+    tempExtractThree = Mat(*originalFrame, extractRectThree),
+    tempExtractFour = Mat(*originalFrame, extractRectFour),
+    tempExtractFive = Mat(*originalFrame, extractRectFive),
+    tempExtractSix = Mat(*originalFrame, extractRectSix),
+    tempExtractSeven = Mat(*originalFrame, extractRectSeven);
+    
+    extractFrameStorage.push_back(tempExtractOne);
+    extractFrameStorage.push_back(tempExtractTwo);
+    extractFrameStorage.push_back(tempExtractThree);
+    extractFrameStorage.push_back(tempExtractFour);
+    extractFrameStorage.push_back(tempExtractFive);
+    extractFrameStorage.push_back(tempExtractSix);
+    extractFrameStorage.push_back(tempExtractSeven);
+}
 
 
 

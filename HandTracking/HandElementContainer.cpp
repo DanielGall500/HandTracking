@@ -32,50 +32,67 @@ void HandElementContainer::findHandProperties(Mat binaryImage, VVPoints &outputC
     findContours(editedImg, contours, hierarchy, CV_RETR_TREE,
                  CV_CHAIN_APPROX_SIMPLE, Point(0,0));
     
-    maxContours = getNMaxContours(contours, topNContours);
-    
-    VVPoints hull(maxContours.size());
-    VVInts hullInts(maxContours.size());
-    VVVec4i defects(maxContours.size());
-    
-    for (int i = 0; i < maxContours.size(); i++)
+    if (contours.size() > 0)
     {
-        convexHull(maxContours[i], hull[i], false);
-        convexHull(maxContours[i], hullInts[i], false);
-        
-        if (hullInts[i].size() > 3)
-        {
-            convexityDefects(maxContours[i], hullInts[i], defects[i]);
-        }
-    }
     
-    outputContours = maxContours;
-    outputHull = hull;
-    outputHullInts = hullInts;
-    outputDefects = defects;
+        maxContours = getNMaxContours(contours, topNContours);
+        
+        VVPoints hull(maxContours.size());
+        VVInts hullInts(maxContours.size());
+        VVVec4i defects(maxContours.size());
+        
+        for (int i = 0; i < maxContours.size(); i++)
+        {
+            convexHull(maxContours[i], hull[i], false);
+            convexHull(maxContours[i], hullInts[i], false);
+            
+            if (hullInts[i].size() > 3)
+            {
+                convexityDefects(maxContours[i], hullInts[i], defects[i]);
+            }
+        }
+        
+        outputContours = maxContours;
+        outputHull = hull;
+        outputHullInts = hullInts;
+        outputDefects = defects;
+    }
+    else
+        cout << "Contour Size is " << contours.size() << endl;
 }
 
 VVPoints HandElementContainer::getNMaxContours(VVPoints contours, int n)
 {
     VVPoints nContours;
     vector<double> contourAreas;
+    vector<int> foundMax;
     
-    for (int i = 0; i < contours.size(); i++)
+    for (auto contour : contours)
     {
-        double area = contourArea(contours[i]);
+        double area = contourArea(contour);
         contourAreas.push_back(area);
     }
     
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i <= n; i++)
     {
-        vector<double>::iterator result;
+        int maxPosition = 0;
         
-        result = max_element(contourAreas.begin(), contourAreas.end());
+        for (int j = 0; j < contourAreas.size(); j++)
+        {
+            if (contourAreas[j] > contourAreas[maxPosition] &&
+                std::find(foundMax.begin(), foundMax.end(), maxPosition) == foundMax.end())
+            {
+                maxPosition = j;
+                cout << "New Max: " << contourAreas[maxPosition] << endl;
+            }
+        }
         
-        float position = std::distance(contourAreas.begin(), result);
+        cout << "Size: " << contours.size() << endl;
+        cout << "MaxPosition: " << maxPosition << endl;
         
-        nContours.push_back(contours[position]);
-        contours.erase(contours.begin() + position);
+        nContours.push_back(contours[maxPosition]);
+        
+        foundMax.push_back(maxPosition);
     }
     
     return nContours;
@@ -117,7 +134,8 @@ Mat HandElementContainer::drawDefects(Mat frame, VVVec4i defects, VVPoints conto
     return handConvexityDefects;
 }
 
-void HandElementContainer::dismissIrrelevantDefects(VVVec4i &defects, VVPoints contours, float angleThresh)
+void HandElementContainer::dismissIrrelevantDefects(VVVec4i &defects, VVPoints contours, float angleThresh,
+                                                    vector<int> &fingerAngles)
 {
     VVVec4i passedDefects;
     
@@ -125,8 +143,8 @@ void HandElementContainer::dismissIrrelevantDefects(VVVec4i &defects, VVPoints c
     {
         float slope;
         
-        int yDist = pt2.y - pt1.y;
-        int xDist = pt2.x - pt1.x;
+        float yDist = pt2.y - pt1.y;
+        float xDist = pt2.x - pt1.x;
         
         // make sure we don't divide by zero
         // for the slope as makes hardware implode
@@ -148,8 +166,8 @@ void HandElementContainer::dismissIrrelevantDefects(VVVec4i &defects, VVPoints c
             Vec4i defect = defects[idx][i];
             
             int startIdx = defect[0],
-            farIdx = defect[1],
-            endIdx = defect[2];
+            endIdx = defect[1],
+            farIdx = defect[2];
             
             Point ptStart(contours[idx][startIdx]),
             ptFar(contours[idx][farIdx]),
@@ -159,10 +177,13 @@ void HandElementContainer::dismissIrrelevantDefects(VVVec4i &defects, VVPoints c
             startFarSlp = findSlope(ptStart, ptFar), //green
             endFarSlp = findSlope(ptEnd, ptFar); //red slope 2
             
-            float commonAngle = atan((startEndSlp + endFarSlp) / (1 - startEndSlp * endFarSlp)); //find angle between two slopes
+            float commonAngle = atan(float(startEndSlp + endFarSlp) / float(1 - startEndSlp * endFarSlp)); //find angle between two slopes
             
             if (commonAngle <= angleThresh)
                 subDefects.push_back(defect);
+
+            
+            fingerAngles.push_back(commonAngle);
         }
         passedDefects.push_back(subDefects);
     }

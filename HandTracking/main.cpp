@@ -25,6 +25,9 @@
 using namespace cv;
 using namespace std;
 
+bool isHandExpanded(vector<vector<Vec4i>> defects, vector<vector<Point>> contours);
+vector<int> getFingerAngles(vector<vector<Vec4i>> defects, vector<vector<Point>> contours);
+
 void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> labels, char seperator = ';')
 {
     std::stringstream fileStream(imgs_filename.c_str(), ifstream::in);
@@ -125,6 +128,8 @@ int main(int argc, const char * argv[]) {
         if (frameCounter >= 50)
         {
             Mat resizedFrame;
+            vector<int> fingerAngles;
+            
             resize(frame, resizedFrame, Size(320,240), INTER_NEAREST);
         
             Mat binaryImage = skinFilter.runBinaryFiltering(resizedFrame);
@@ -134,9 +139,10 @@ int main(int argc, const char * argv[]) {
             handElements.findHandProperties(binaryImage, handContours, handHullPoints,
                                             handHullInts, handDefects, topNContours);
             
-            handElements.dismissIrrelevantDefects(handDefects, handContours, 90);
+            handElements.dismissIrrelevantDefects(handDefects, handContours, 90, fingerAngles);
             
             Mat defectsImg = handElements.drawDefects(binaryImage, handDefects, handContours);
+            
             
             imshow("enclosedHand", binaryImage);
             imshow("defects", defectsImg);
@@ -159,7 +165,42 @@ int main(int argc, const char * argv[]) {
     return 0;
 }
 
+bool isHandExpanded(vector<vector<Vec4i>> defects, vector<vector<Point>> contours)
+{
+    vector<int> fingerAngles;
+    
+    for (int idx = 0; idx < defects.size(); idx++)
+    {
+        for (int i = 0; i < defects[idx].size(); i++)
+        {
+            Vec4i defect = defects[idx][i];
+            
+            int startIdx = defect[0],
+            endIdx = defect[1],
+            farIdx = defect[2];
+            
+            Point ptStart(contours[idx][startIdx]),
+            ptEnd(contours[idx][endIdx]),
+            ptFar(contours[idx][farIdx]);
+            
+           /*[150, 29]
+            [146, 32]
+            [147, 32]*/
+        }
+    }
+    
+    return true;
+}
 
+bool isFingerPointed(vector<vector<Vec4i>> defects, vector<vector<Point>> contours)
+{
+    return true;
+}
+
+bool checkPointedFinger(vector<vector<Vec4i>> defects, vector<vector<Point>> contours, vector<int> fingerAngles)
+{
+    return true;
+}
 
 
 

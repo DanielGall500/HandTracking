@@ -34,12 +34,17 @@ public:
                             VVPoints &outputHull, VVInts &hullInts,
                             VVVec4i &outputDefects, int topNContours = 1);
     
-    void dismissIrrelevantDefects(VVVec4i &defects, VVPoints contours,
+    void dismissIrrelevantInfo(VVVec4i &defects, VVPoints contours,
                                   float angleThresh, vector<int> &fingerAngles);
 
     Mat drawDefects(Mat frame, VVVec4i defects, VVPoints contours);
     
+    VVVec4i getFailedDefects() { return *pFailedDefects; }
+    
+    float findSlope(Point pt1, Point pt2);
+    
 private:
+    VVVec4i *pFailedDefects;
     
     VVPoints getNMaxContours(VVPoints contours, int n);
     

@@ -11,9 +11,9 @@
 using namespace cv;
 using namespace std;
 
-BinarySkinFilter::BinarySkinFilter()
+BinarySkinFilter::BinarySkinFilter(int imgMultiplier)
 {
-    
+    contrastMultiplier = imgMultiplier;
 }
 
 BinarySkinFilter::~BinarySkinFilter()
@@ -27,7 +27,7 @@ void BinarySkinFilter::runColourCollection(int filterThreshold)
     
     for(int ext = 0; ext <= extractFrameStorage.size() - 1; ext++)
     {
-        col = findDominantColour(extractFrameStorage[ext]);
+        col = findDominantColour(extractFrameStorage[ext], contrastMultiplier);
         
         filterColours.push_back(col);
     }
@@ -35,7 +35,7 @@ void BinarySkinFilter::runColourCollection(int filterThreshold)
     findMinMaxChannels(filterColours, filterThreshold, minB, maxB, minG, maxG, minR, maxR);
 }
 
-Vec3b BinarySkinFilter::findDominantColour(Mat extractFrame)
+Vec3b BinarySkinFilter::findDominantColour(Mat extractFrame, int multiplier)
 {
     int blueCollection[255] = {0},
         greenCollection[255] = {0},
@@ -175,13 +175,16 @@ void BinarySkinFilter::showExtractAreas(Mat frame, Rect extracts[7], Scalar colo
 
 void BinarySkinFilter::collectImageExtracts()
 {
-    Mat tempExtractOne = Mat(*originalFrame, extractRectOne),
-    tempExtractTwo = Mat(*originalFrame, extractRectTwo),
-    tempExtractThree = Mat(*originalFrame, extractRectThree),
-    tempExtractFour = Mat(*originalFrame, extractRectFour),
-    tempExtractFive = Mat(*originalFrame, extractRectFive),
-    tempExtractSix = Mat(*originalFrame, extractRectSix),
-    tempExtractSeven = Mat(*originalFrame, extractRectSeven);
+    cout << updatedFrame->size() << endl;
+    cout << extractRectOne.size() << endl;
+    
+    Mat tempExtractOne = Mat(*updatedFrame, extractRectOne),
+    tempExtractTwo = Mat(*updatedFrame, extractRectTwo),
+    tempExtractThree = Mat(*updatedFrame, extractRectThree),
+    tempExtractFour = Mat(*updatedFrame, extractRectFour),
+    tempExtractFive = Mat(*updatedFrame, extractRectFive),
+    tempExtractSix = Mat(*updatedFrame, extractRectSix),
+    tempExtractSeven = Mat(*updatedFrame, extractRectSeven);
     
     extractFrameStorage.push_back(tempExtractOne);
     extractFrameStorage.push_back(tempExtractTwo);
@@ -190,6 +193,14 @@ void BinarySkinFilter::collectImageExtracts()
     extractFrameStorage.push_back(tempExtractFive);
     extractFrameStorage.push_back(tempExtractSix);
     extractFrameStorage.push_back(tempExtractSeven);
+}
+
+void BinarySkinFilter::importFrameWithContrast(Mat &frame)
+{
+    Mat contrastedFrame = Mat(frame.rows, frame.cols, CV_8UC3);
+    
+    frame.convertTo(contrastedFrame, -1, contrastMultiplier, 0);
+    updatedFrame = &frame;
 }
 
 

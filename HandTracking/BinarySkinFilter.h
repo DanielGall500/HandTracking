@@ -21,11 +21,11 @@
 class BinarySkinFilter
 {
 public:
-    BinarySkinFilter();
+    BinarySkinFilter(int imgMultiplier = 1);
     
     ~BinarySkinFilter();
     
-    void updateFrame(cv::Mat &frame) { originalFrame = &frame; }
+    void importFrameWithContrast(cv::Mat &frame);
     
     void showExtractAreas(cv::Mat frame, cv::Rect extracts[7], cv::Scalar colour);
     
@@ -36,7 +36,8 @@ public:
     cv::Mat runBinaryFiltering(cv::Mat frame);
     
 private:
-    cv::Mat *originalFrame;
+    cv::Mat *updatedFrame;
+    int contrastMultiplier;
     
     int totalExtracts = 7;
     
@@ -47,10 +48,12 @@ private:
     
     std::vector<cv::Vec3b> filterColours;
     
-    cv::Vec3b findDominantColour(cv::Mat extractFrame);
+    cv::Vec3b findDominantColour(cv::Mat extractFrame, int multiplier);
     
     void setExtractLocations(cv::Rect extractRects[7]);
     void collectImageExtracts();
+    
+    void increaseContrast(cv::Mat &frame, int difference); //makes colours more distinct
     
     std::vector<int> minB, maxB, minG, maxG, minR, maxR;
     

@@ -25,8 +25,21 @@
 using namespace cv;
 using namespace std;
 
-bool isHandExpanded(vector<vector<Vec4i>> defects, vector<vector<Point>> contours);
-vector<int> getFingerAngles(vector<vector<Vec4i>> defects, vector<vector<Point>> contours);
+bool isHandExpanded(vector<int> fingerAngles, int threshDegree);
+
+Rect extRectOne, extRectTwo, extRectThree, extRectFour,
+extRectFive, extRectSix, extRectSeven, extRectEight, extRectNine, extRectTen;
+
+vector<vector<Point>> handContours;
+vector<vector<Point>> handHullPoints;
+vector<vector<int>> handHullInts;
+vector<vector<Vec4i>> handDefects;
+
+vector<int> fingerAngles;
+
+HandElementContainer ptManager;
+
+int contrastMultiplier = 2;
 
 void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> labels, char seperator = ';')
 {
@@ -54,24 +67,17 @@ void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> lab
     
 }
 
-Rect extractRectOne, extractRectTwo, extractRectThree, extractRectFour,
-    extractRectFive, extractRectSix, extractRectSeven;
-
-vector<vector<Point>> handContours;
-vector<vector<Point>> handHullPoints;
-vector<vector<int>> handHullInts;
-vector<vector<Vec4i>> handDefects;
-
 int main(int argc, const char * argv[]) {
     
     VideoCapture cap(0); //always BGR
-    uint frameCounter = -1;
+    
+    int frameCounter = -1;
     
     if(!cap.isOpened())
         return -1;
     
-    BinarySkinFilter skinFilter;
-    int threshold = 15;
+    BinarySkinFilter skinFilter(contrastMultiplier);
+    int binaryThreshold = 25;
     
     HandElementContainer handElements;
     
@@ -81,20 +87,24 @@ int main(int argc, const char * argv[]) {
     int wCenter = firstFrame.size().width / 2;
     int hCenter = firstFrame.size().height / 2;
     
-    extractRectOne = Rect(Point(wCenter - 50, hCenter + 70), Point(wCenter - 30, hCenter + 50));
-    extractRectTwo = Rect(Point(wCenter + 50, hCenter + 150), Point(wCenter + 30, hCenter + 130));
-    extractRectThree = Rect(Point(wCenter + 50, hCenter + 70), Point(wCenter + 30, hCenter + 50));
-    extractRectFour = Rect(Point(wCenter - 50, hCenter + 150), Point(wCenter - 30, hCenter + 130));
+    extRectOne = Rect(Point(wCenter - 100, hCenter + 70), Point(wCenter + 100, hCenter + 50)); // -(50 30)
+    extRectTwo = Rect(Point(wCenter - 100, hCenter + 150), Point(wCenter + 100, hCenter + 130)); //50 30
+    extRectThree = Rect(Point(wCenter - 100, hCenter + 10), Point(wCenter + 100, hCenter - 10)); //50 30
     
-    extractRectFive = Rect(Point(wCenter - 70, hCenter - 120), Point(wCenter - 50, hCenter - 100));
-    extractRectSix = Rect(Point(wCenter + 70, hCenter - 120), Point(wCenter + 50, hCenter - 100));
-    extractRectSeven = Rect(Point(wCenter - 10, hCenter - 150), Point(wCenter + 10, hCenter - 130));
+    extRectFour = Rect(Point(wCenter - 120, hCenter - 240), Point(wCenter - 100, hCenter - 80));
+    
+    extRectFive = Rect(Point(wCenter - 70, hCenter - 280), Point(wCenter - 50, hCenter - 80));
+    extRectSix = Rect(Point(wCenter + 70, hCenter - 280), Point(wCenter + 50, hCenter - 80));
+    extRectSeven = Rect(Point(wCenter - 10, hCenter - 310), Point(wCenter + 10, hCenter - 110));
+    
+    extRectEight = Rect(Point(wCenter + 140, hCenter - 50), Point(wCenter + 120, hCenter + 50));
 
     
-    Rect extracts[7] = {extractRectOne, extractRectTwo, extractRectThree, extractRectFour,
-                        extractRectFive, extractRectSix, extractRectSeven};
+    Rect extracts[7] = {extRectOne, extRectTwo, extRectThree, extRectFour,
+                        extRectFive, extRectSix, extRectSeven};
 
-    namedWindow("main");
+    namedWindow("binaryHand");
+    createTrackbar("Threshold", "binaryHand", &binaryThreshold, 100);
     
     Scalar boxColour(0,255,0);
     
@@ -109,26 +119,28 @@ int main(int argc, const char * argv[]) {
         clock_t start, end;
         start = clock();
         
-        skinFilter.updateFrame(frame);
+        skinFilter.importFrameWithContrast(frame);
         
-        if (frameCounter < 48)
+        if (frameCounter < 100)
         {
            skinFilter.showExtractAreas(frame, extracts, boxColour);
+            rectangle(frame, extRectEight, Scalar(0,255,0));
         }
         
-        if (frameCounter == 48)
+        if (frameCounter == 100)
         {
             skinFilter.runExtractCollection(extracts);
             
-            skinFilter.runColourCollection(threshold);
+            skinFilter.runColourCollection(binaryThreshold);
             
             boxColour = Scalar(0,0,255);
         }
         
-        if (frameCounter >= 50)
+        if (frameCounter >= 100)
         {
             Mat resizedFrame;
-            vector<int> fingerAngles;
+            
+            vector<vector<Vec4i>> failedDefects;
             
             resize(frame, resizedFrame, Size(320,240), INTER_NEAREST);
         
@@ -139,14 +151,35 @@ int main(int argc, const char * argv[]) {
             handElements.findHandProperties(binaryImage, handContours, handHullPoints,
                                             handHullInts, handDefects, topNContours);
             
-            handElements.dismissIrrelevantDefects(handDefects, handContours, 90, fingerAngles);
+            
+            handElements.dismissIrrelevantInfo(handDefects, handContours, 90, fingerAngles);
+            
+            failedDefects = handElements.getFailedDefects();
+            
+            bool expanded = isHandExpanded(fingerAngles, 50);
+            Scalar handColour;
+            
+            if (expanded)
+            {
+                handColour = Scalar(0,255,0);
+                cout << "PASSED - GREEN" << endl;
+            }
+            else
+            {
+                handColour = Scalar(0,0,255);
+                cout << "FAILED - RED" << endl;
+            }
+            
+            Mat handPositionId = Mat(binaryImage.rows, binaryImage.cols, CV_8UC3);
+            handPositionId = handColour;
             
             Mat defectsImg = handElements.drawDefects(binaryImage, handDefects, handContours);
             
+            Mat failedDefImg = handElements.drawDefects(binaryImage, failedDefects, handContours);
             
-            imshow("enclosedHand", binaryImage);
+            imshow("binaryHand", binaryImage);
             imshow("defects", defectsImg);
-            
+            imshow("handColours", handPositionId);
             continue;
         }
         
@@ -165,31 +198,19 @@ int main(int argc, const char * argv[]) {
     return 0;
 }
 
-bool isHandExpanded(vector<vector<Vec4i>> defects, vector<vector<Point>> contours)
+bool isHandExpanded(vector<int> fingerAngles, int threshDegree)
 {
-    vector<int> fingerAngles;
+    bool checkExpanded;
+    int threshCount = 0;
     
-    for (int idx = 0; idx < defects.size(); idx++)
+    for (int angle : fingerAngles)
     {
-        for (int i = 0; i < defects[idx].size(); i++)
-        {
-            Vec4i defect = defects[idx][i];
-            
-            int startIdx = defect[0],
-            endIdx = defect[1],
-            farIdx = defect[2];
-            
-            Point ptStart(contours[idx][startIdx]),
-            ptEnd(contours[idx][endIdx]),
-            ptFar(contours[idx][farIdx]);
-            
-           /*[150, 29]
-            [146, 32]
-            [147, 32]*/
-        }
+        if (angle >= threshDegree) threshCount++;
     }
     
-    return true;
+    checkExpanded = threshCount >= 4 ? true : false;
+    
+    return checkExpanded;
 }
 
 bool isFingerPointed(vector<vector<Vec4i>> defects, vector<vector<Point>> contours)

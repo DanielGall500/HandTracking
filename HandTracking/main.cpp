@@ -28,7 +28,7 @@ using namespace std;
 bool isHandExpanded(vector<int> fingerAngles, int threshDegree);
 
 Rect extRectOne, extRectTwo, extRectThree, extRectFour,
-extRectFive, extRectSix, extRectSeven, extRectEight, extRectNine, extRectTen;
+extRectFive, extRectSix, extRectSeven, extRectEight;
 
 vector<vector<Point>> handContours;
 vector<vector<Point>> handHullPoints;
@@ -40,6 +40,8 @@ vector<int> fingerAngles;
 HandElementContainer ptManager;
 
 int contrastMultiplier = 2;
+int binaryThreshold = 15;
+int colourCountForExtracts = 3;
 
 void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> labels, char seperator = ';')
 {
@@ -76,8 +78,7 @@ int main(int argc, const char * argv[]) {
     if(!cap.isOpened())
         return -1;
     
-    BinarySkinFilter skinFilter(contrastMultiplier);
-    int binaryThreshold = 25;
+    BinarySkinFilter skinFilter;
     
     HandElementContainer handElements;
     
@@ -87,9 +88,9 @@ int main(int argc, const char * argv[]) {
     int wCenter = firstFrame.size().width / 2;
     int hCenter = firstFrame.size().height / 2;
     
-    extRectOne = Rect(Point(wCenter - 100, hCenter + 70), Point(wCenter + 100, hCenter + 50)); // -(50 30)
-    extRectTwo = Rect(Point(wCenter - 100, hCenter + 150), Point(wCenter + 100, hCenter + 130)); //50 30
-    extRectThree = Rect(Point(wCenter - 100, hCenter + 10), Point(wCenter + 100, hCenter - 10)); //50 30
+    extRectOne = Rect(Point(wCenter - 100, hCenter + 70), Point(wCenter + 100, hCenter + 50));
+    extRectTwo = Rect(Point(wCenter - 100, hCenter + 150), Point(wCenter + 100, hCenter + 130));
+    extRectThree = Rect(Point(wCenter - 100, hCenter + 10), Point(wCenter + 100, hCenter - 10));
     
     extRectFour = Rect(Point(wCenter - 120, hCenter - 240), Point(wCenter - 100, hCenter - 80));
     
@@ -97,11 +98,11 @@ int main(int argc, const char * argv[]) {
     extRectSix = Rect(Point(wCenter + 70, hCenter - 280), Point(wCenter + 50, hCenter - 80));
     extRectSeven = Rect(Point(wCenter - 10, hCenter - 310), Point(wCenter + 10, hCenter - 110));
     
-    extRectEight = Rect(Point(wCenter + 140, hCenter - 50), Point(wCenter + 120, hCenter + 50));
+    extRectEight = Rect(Point(wCenter + 140, hCenter - 50), Point(wCenter + 120, hCenter));
 
     
-    Rect extracts[7] = {extRectOne, extRectTwo, extRectThree, extRectFour,
-                        extRectFive, extRectSix, extRectSeven};
+    Rect extracts[8] = {extRectOne, extRectTwo, extRectThree, extRectFour,
+                        extRectFive, extRectSix, extRectSeven, extRectEight};
 
     namedWindow("binaryHand");
     createTrackbar("Threshold", "binaryHand", &binaryThreshold, 100);
@@ -119,19 +120,18 @@ int main(int argc, const char * argv[]) {
         clock_t start, end;
         start = clock();
         
-        skinFilter.importFrameWithContrast(frame);
+        skinFilter.importFrameOriginal(frame);
         
         if (frameCounter < 100)
         {
            skinFilter.showExtractAreas(frame, extracts, boxColour);
-            rectangle(frame, extRectEight, Scalar(0,255,0));
         }
         
         if (frameCounter == 100)
         {
             skinFilter.runExtractCollection(extracts);
             
-            skinFilter.runColourCollection(binaryThreshold);
+            skinFilter.runColourCollection(binaryThreshold, colourCountForExtracts);
             
             boxColour = Scalar(0,0,255);
         }
@@ -162,12 +162,10 @@ int main(int argc, const char * argv[]) {
             if (expanded)
             {
                 handColour = Scalar(0,255,0);
-                cout << "PASSED - GREEN" << endl;
             }
             else
             {
                 handColour = Scalar(0,0,255);
-                cout << "FAILED - RED" << endl;
             }
             
             Mat handPositionId = Mat(binaryImage.rows, binaryImage.cols, CV_8UC3);

@@ -18,46 +18,51 @@
 #include <iostream>
 #include <array>
 
+const int totalExtracts = 8;
+
+using namespace std;
+using namespace cv;
+
 class BinarySkinFilter
 {
 public:
-    BinarySkinFilter(int imgMultiplier = 1);
+    BinarySkinFilter();
     
     ~BinarySkinFilter();
     
-    void importFrameWithContrast(cv::Mat &frame);
+    void importFrameWithContrast(Mat &frame, int contrastMultiplier);
     
-    void showExtractAreas(cv::Mat frame, cv::Rect extracts[7], cv::Scalar colour);
+    void importFrameOriginal(Mat &frame);
     
-    void runExtractCollection(cv::Rect extractRects[7]) { setExtractLocations(extractRects); collectImageExtracts(); };
+    void showExtractAreas(Mat frame, Rect extracts[totalExtracts], Scalar colour);
     
-    void runColourCollection(int filterThreshold);
+    void runExtractCollection(Rect extractRects[totalExtracts]) { setExtractLocations(extractRects); collectImageExtracts(); };
     
-    cv::Mat runBinaryFiltering(cv::Mat frame);
+    void runColourCollection(int filterThreshold, int dominantColours);
+    
+    Mat runBinaryFiltering(Mat frame);
     
 private:
-    cv::Mat *updatedFrame;
-    int contrastMultiplier;
+    Mat *updatedFrame;
+    int imgMultiplier;
     
-    int totalExtracts = 7;
+    std::vector<Mat> extractFrameStorage;
     
-    std::vector<cv::Mat> extractFrameStorage;
+    Rect extractRectOne, extractRectTwo, extractRectThree, extractRectFour,
+    extractRectFive, extractRectSix, extractRectSeven, extractRectEight;
     
-    cv::Rect extractRectOne, extractRectTwo, extractRectThree, extractRectFour,
-    extractRectFive, extractRectSix, extractRectSeven;
+    std::vector<Vec3b> filterColours;
     
-    std::vector<cv::Vec3b> filterColours;
+    vector<Vec3b> findDominantColours(Mat extractFrame, int multiplier, int amountOfColours);
     
-    cv::Vec3b findDominantColour(cv::Mat extractFrame, int multiplier);
-    
-    void setExtractLocations(cv::Rect extractRects[7]);
+    void setExtractLocations(Rect extractRects[totalExtracts]);
     void collectImageExtracts();
     
-    void increaseContrast(cv::Mat &frame, int difference); //makes colours more distinct
+    void increaseContrast(Mat &frame, int difference); //makes colours more distinct
     
     std::vector<int> minB, maxB, minG, maxG, minR, maxR;
     
-    void findMinMaxChannels(std::vector<cv::Vec3b> filter, int thresh,
+    void findMinMaxChannels(std::vector<Vec3b> filter, int thresh,
                             std::vector<int> &minB, std::vector<int> &maxB,
                             std::vector<int> &minG, std::vector<int> &maxG,
                             std::vector<int> &minR, std::vector<int> &maxR);

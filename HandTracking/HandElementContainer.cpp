@@ -18,17 +18,21 @@ HandElementContainer::~HandElementContainer()
     
 }
 
+//FINDING THE SHAPE OF THE HAND
 void HandElementContainer::findHandProperties(Mat binaryImage, VVPoints &outputContours,
                                               VVPoints &outputHull, VVInts &outputHullInts,
                                               VVVec4i &outputDefects, int topNContours)
 {
     Mat editedImg;
+    
+    //Convert to black/white
     cvtColor(binaryImage, editedImg, CV_BGR2GRAY);
     
     VVPoints contours;
     VVPoints maxContours;
     vector<Vec4i> hierarchy;
-    
+   
+    //Store the contour points
     findContours(editedImg, contours, hierarchy, CV_RETR_TREE,
                  CV_CHAIN_APPROX_SIMPLE, Point(0,0));
     
@@ -37,6 +41,7 @@ void HandElementContainer::findHandProperties(Mat binaryImage, VVPoints &outputC
     
         maxContours = getNMaxContours(contours, topNContours);
         
+        //Form the shape of the hand
         VVPoints hull(maxContours.size());
         VVInts hullInts(maxContours.size());
         VVVec4i defects(maxContours.size());
@@ -53,9 +58,9 @@ void HandElementContainer::findHandProperties(Mat binaryImage, VVPoints &outputC
         }
         
         outputContours = maxContours;
-        outputHull = hull;
         outputHullInts = hullInts;
-        outputDefects = defects;
+        outputDefects  = defects;
+        outputHull     = hull;
     }
 }
 
@@ -71,15 +76,19 @@ VVPoints HandElementContainer::getNMaxContours(VVPoints contours, int n)
         contourAreas.push_back(area);
     }
     
+    
     for (int i = 0; i <= n; i++)
     {
         int maxPosition = 0;
         
+        //For Each Contour
         for (int j = 0; j < contourAreas.size(); j++)
         {
+            //Find Max
             if (contourAreas[j] > contourAreas[maxPosition] &&
                 std::find(foundMax.begin(), foundMax.end(), maxPosition) == foundMax.end())
             {
+                //Update Max Position
                 maxPosition = j;
             }
         }

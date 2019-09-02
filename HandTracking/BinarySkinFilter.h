@@ -30,36 +30,35 @@ public:
     
     ~BinarySkinFilter();
     
-    void importFrameWithContrast(Mat &frame, int contrastMultiplier);
-    
+    //Import frame
     void importFrameOriginal(Mat &frame);
     
+    //Show extract areas on video feed
     void showExtractAreas(Mat frame, Rect extracts[totalExtracts], Scalar colour);
     
-    void runExtractCollection(Rect extractRects[totalExtracts]) { setExtractLocations(extractRects); collectImageExtracts(); };
+    //Call when the extracts should be taken for processing
+    void collectImageExtracts(Rect extracts[]);
     
+    //Find filter colours after extracts have been collected
     void runColourCollection(int filterThreshold, int dominantColours);
     
+    //Filter frame based on filter colours
     Mat runBinaryFiltering(Mat frame);
+    
+    std::vector<Vec3b> getFilterCols() { return filterColours; };
     
 private:
     Mat *updatedFrame;
-    int imgMultiplier;
     
-    std::vector<Mat> extractFrameStorage;
+    vector<Mat> extractFrameStorage;
+    vector<Vec3b> filterColours;
     
-    Rect extractRectOne, extractRectTwo, extractRectThree, extractRectFour,
-    extractRectFive, extractRectSix, extractRectSeven, extractRectEight;
+    //Find the most commonly occurring colours in an image
+    vector<Vec3b> findDominantColours(Mat extractFrame, int amountOfColours);
     
-    std::vector<Vec3b> filterColours;
-    
-    vector<Vec3b> findDominantColours(Mat extractFrame, int multiplier, int amountOfColours);
-    
-    void setExtractLocations(Rect extractRects[totalExtracts]);
-    void collectImageExtracts();
-    
-    void increaseContrast(Mat &frame, int difference); //makes colours more distinct
-    
+    /* Thresholds:
+       These are the minimum/maximum vals that each channel
+       can be to pass the filter test */
     std::vector<int> minB, maxB, minG, maxG, minR, maxR;
     
     void findMinMaxChannels(std::vector<Vec3b> filter, int thresh,

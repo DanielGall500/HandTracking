@@ -23,33 +23,42 @@ void BinarySkinFilter::runColourCollection(int filterThreshold, int dominantColo
 {
     vector<Vec3b> cols;
     
+    //For Each Extract
     for(int ext = 0; ext < extractFrameStorage.size(); ext++)
     {
-        cols = findDominantColours(extractFrameStorage[ext], imgMultiplier, dominantColours);
+        //Most Dominant Colours
+        cols = findDominantColours(extractFrameStorage[ext], dominantColours);
         
-        cout << "EXTRACT " << ext << endl;
-        
+        //Add to global vector
         for (Vec3b filterColour : cols)
         {
-            cout << "Filter: " << filterColour << endl;
             filterColours.push_back(filterColour);
         }
     }
     
+    //Find Thresholds
     findMinMaxChannels(filterColours, filterThreshold, minB, maxB, minG, maxG, minR, maxR);
 }
 
-vector<Vec3b> BinarySkinFilter::findDominantColours(Mat extractFrame, int multiplier, int amountOfColours)
+vector<Vec3b> BinarySkinFilter::findDominantColours(Mat extractFrame, int amountOfColours)
 {
-    int blueCollection[255] = {0},
+    /*These arrays are a counter for each individual 
+      shade of b, g and r.
+     
+     If we increment any individual element of this array,
+     this means that shade of has been found and thus is 
+     more dominant in the extract image. */
+     
+    int blueCollection[255]  = {0},
         greenCollection[255] = {0},
-        redCollection[255] = {0};
+        redCollection[255]   = {0};
     
     Vec3b channels;
     Vec3b filterPixel;
     
     vector<Vec3b> filterPixels;
     
+    //For Each Pixel in Extract
     for (short int row = 0; row <= extractFrame.rows; row++)
     {
         for (short int col = 0; col <= extractFrame.cols; col++)
@@ -57,25 +66,37 @@ vector<Vec3b> BinarySkinFilter::findDominantColours(Mat extractFrame, int multip
             channels = extractFrame.at<Vec3b>(row, col);
             
             int b = channels[0],
-            g = channels[1],
-            r = channels[2];
+                g = channels[1],
+                r = channels[2];
             
-            blueCollection[b] += 1;
-            greenCollection[g] += 1;
-            redCollection[r] += 1;
+            /*For each pixel, we note which colours are 
+              being found most often */
+            
+            //POSSIBLY b - 1???
+            blueCollection[b]++;
+            greenCollection[g]++;
+            redCollection[r]++;
         }
     }
     
+    //Find N Colours (specified in func inp)
     for (int i = 0; i < amountOfColours; i++)
     {
-        int blueMode = findChannelMax(blueCollection),
-        greenMode = findChannelMax(greenCollection),
-        redMode = findChannelMax(redCollection);
+        /* Find the mode of each array.
+         
+           The mode in this case represents the most
+           commonly found shade of blue, green and red
+           in the extract */
         
+        int blueMode  = findChannelMax(blueCollection),
+            greenMode = findChannelMax(greenCollection),
+            redMode   = findChannelMax(redCollection);
+        
+        //Create a colour to use as a filter
         filterPixel = Vec3b(blueMode, greenMode, redMode);
-        
         filterPixels.push_back(filterPixel);
         
+        //We discount these shades for the next colour
         blueCollection[blueMode] = -1;
         greenCollection[greenMode] = -1;
         redCollection[redMode] = -1;
@@ -86,18 +107,28 @@ vector<Vec3b> BinarySkinFilter::findDominantColours(Mat extractFrame, int multip
 
 Mat BinarySkinFilter::runBinaryFiltering(Mat frame)
 {
+    //Create a matrix of placeholder pixels, size of frame
     Mat outputImage(frame.size(), CV_8UC3, Scalar(0,0,0));
+    
     Vec3b *rowPixel;
 
+    //For Each Row
     for (int row = 0; row <= frame.rows; row++)
     {
         rowPixel = frame.ptr<Vec3b>(row);
     
+        //For Each Column
         for (int col = 0; col <= frame.cols; col++)
         {
+            //Store the rgb colours of this pixel
             int b = rowPixel[col][0],
                 g = rowPixel[col][1],
                 r = rowPixel[col][2];
+            
+            /* If the pixel falls within the skin
+               colour threshold, put a white pixel at
+               that location on the output frame.
+               Else, leave it as black. */
             
             if (withinFilterRange(b, g, r))
                 outputImage.at<Vec3b>(row, col) = Vec3b(255,255,255);
@@ -166,67 +197,36 @@ bool BinarySkinFilter::withinFilterRange(int b, int g, int r) //need to comment 
         
         f++;
     }
+    
     return (bPassed && gPassed && rPassed);
-}
-
-void BinarySkinFilter::setExtractLocations(Rect extractRects[totalExtracts])
-{
-    extractRectOne = extractRects[0]; //need to be kept seperate
-    extractRectTwo = extractRects[1];
-    extractRectThree = extractRects[2];
-    extractRectFour = extractRects[3];
-    extractRectFive = extractRects[4];
-    extractRectSix = extractRects[5];
-    extractRectSeven = extractRects[6];
-    extractRectEight = extractRects[7];
 }
 
 
 void BinarySkinFilter::showExtractAreas(Mat frame, Rect extracts[totalExtracts], Scalar colour)
 {
+    //Draws the extracts onto a frame
+    
     for (int i = 0; i < totalExtracts; i++)
     {
         rectangle(frame, extracts[i], colour);
     }
 }
 
-void BinarySkinFilter::collectImageExtracts()
+void BinarySkinFilter::collectImageExtracts(Rect extracts[])
 {
-    cout << updatedFrame->size() << endl;
-    cout << extractRectOne.size() << endl;
+    extractFrameStorage.clear();
     
-    Mat tempExtractOne = Mat(*updatedFrame, extractRectOne),
-    tempExtractTwo = Mat(*updatedFrame, extractRectTwo),
-    tempExtractThree = Mat(*updatedFrame, extractRectThree),
-    tempExtractFour = Mat(*updatedFrame, extractRectFour),
-    tempExtractFive = Mat(*updatedFrame, extractRectFive),
-    tempExtractSix = Mat(*updatedFrame, extractRectSix),
-    tempExtractSeven = Mat(*updatedFrame, extractRectSeven),
-    tempExtractEight = Mat(*updatedFrame, extractRectEight);
-    
-    extractFrameStorage.push_back(tempExtractOne);
-    extractFrameStorage.push_back(tempExtractTwo);
-    extractFrameStorage.push_back(tempExtractThree);
-    extractFrameStorage.push_back(tempExtractFour);
-    extractFrameStorage.push_back(tempExtractFive);
-    extractFrameStorage.push_back(tempExtractSix);
-    extractFrameStorage.push_back(tempExtractSeven);
-    extractFrameStorage.push_back(tempExtractEight);
-}
-
-void BinarySkinFilter::importFrameWithContrast(Mat &frame, int contrastMultiplier)
-{
-    Mat contrastedFrame = Mat(frame.rows, frame.cols, CV_8UC3);
-    imgMultiplier = contrastMultiplier;
-    
-    frame.convertTo(contrastedFrame, -1, contrastMultiplier, 0);
-    updatedFrame = &frame;
+    for(int i = 0; i < totalExtracts; i++)
+    {
+        Mat tmpExt = Mat(*updatedFrame, extracts[i]);
+        
+        extractFrameStorage.push_back(tmpExt);
+        
+    }
 }
 
 void BinarySkinFilter::importFrameOriginal(Mat &frame)
 {
-    imgMultiplier = 1; //no difference to contrast
-    
     updatedFrame = &frame;
 }
 

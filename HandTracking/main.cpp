@@ -25,10 +25,13 @@
 using namespace cv;
 using namespace std;
 
-bool isHandExpanded(vector<int> fingerAngles, int threshDegree);
+//bool isHandExpanded(vector<int> fingerAngles, int threshDegree);
 
-Rect extRectOne, extRectTwo, extRectThree, extRectFour,
-extRectFive, extRectSix, extRectSeven, extRectEight;
+const int numExtracts = 8;
+Rect extracts[numExtracts];
+
+//Rect extRectOne, extRectTwo, extRectThree, extRectFour,
+ //    extRectFive, extRectSix, extRectSeven, extRectEight;
 
 vector<vector<Point>> handContours;
 vector<vector<Point>> handHullPoints;
@@ -43,7 +46,159 @@ int contrastMultiplier = 2;
 int binaryThreshold = 15;
 int colourCountForExtracts = 3;
 
-void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> labels, char seperator = ';')
+bool SHOW_DEFECTS = false;
+
+vector<Vec3b> filtColours;
+
+void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> labels, char seperator = ';');
+
+int main(int argc, const char * argv[]) {
+    
+    VideoCapture cap(0); //always BGR
+    
+    int frameCounter = -1;
+    
+    if(!cap.isOpened())
+        return -1;
+    
+    BinarySkinFilter skinFilter;
+    
+    HandElementContainer handElements;
+    
+    Mat firstFrame;
+    cap >> firstFrame;
+    
+    //Find the centre of the images
+    int wCentre = firstFrame.size().width / 2;
+    int hCentre = firstFrame.size().height / 2;
+    
+    /* CREATE EXTRACTS
+       These will be rectangles within the frame that will
+       be used to align our hand and find it's dominant colours*/
+    
+    int R1[8][2] = {
+        {-100, +70}, {-100, +150},
+        {-100, +10}, {-120, -240},
+        {-70,  -280}, {+70,  -280},
+        {-10,  -310}, {+140, -50}
+    };
+    
+    int R2[8][2] {
+        {+100, +50}, {+100, +130},
+        {+100, -10}, {-100, -80},
+        {-50,  -80}, {+50,  -80},
+        {+10,  -110},{+120, +0}
+    };
+    
+    for(int i = 0; i < numExtracts; i++)
+    {
+        Point p1 { wCentre + R1[i][0],
+                   hCentre + R1[i][1] };
+        
+        Point p2 { wCentre + R2[i][0],
+                   hCentre + R2[i][1] };
+        
+        extracts[i] = Rect(p1, p2);
+    }
+
+    namedWindow("binaryHand");
+    
+    Scalar boxColour(0,255,0);
+    
+    while (true)
+    {
+        //Create a matrix containing each frame
+        Mat frame;
+        
+        cap >> frame;
+        
+        frameCounter++;
+        
+        clock_t start, end;
+        start = clock();
+        
+        skinFilter.importFrameOriginal(frame);
+        
+        if (frameCounter < 100)
+        {
+           //Show the areas that pixels will be extracted from
+           skinFilter.showExtractAreas(frame, extracts, boxColour);
+        }
+        else if (frameCounter == 100)
+        {
+            skinFilter.collectImageExtracts(extracts);
+            
+            skinFilter.runColourCollection(binaryThreshold, colourCountForExtracts);
+            
+            boxColour = Scalar(0,0,255);
+            
+            cout << "COLOURS" << endl;
+            for(auto c : skinFilter.getFilterCols())
+            {
+                cout << c << endl;
+            }
+            
+            filtColours = skinFilter.getFilterCols();
+            
+            cap.set(CV_CAP_PROP_FRAME_WIDTH, 320);
+            cap.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
+        }
+        else //AFTER 100th FRAME
+        {
+            vector<vector<Vec4i>> failedDefects;
+            
+            //Binary Filtering
+            Mat binaryImage = skinFilter.runBinaryFiltering(frame);
+            
+            
+            if(SHOW_DEFECTS)
+            {
+                int topNContours = 2;
+                
+                handElements.findHandProperties(binaryImage, handContours, handHullPoints,
+                                                handHullInts, handDefects, topNContours);
+                
+                
+                handElements.dismissIrrelevantInfo(handDefects, handContours, 90, fingerAngles);
+            
+                failedDefects = handElements.getFailedDefects();
+                
+                
+                //Draw the defects i.e the lines connecting different parts of the hand
+                Mat defectsImg = handElements.drawDefects(binaryImage, handDefects, handContours);
+                
+                Mat failedDefImg = handElements.drawDefects(binaryImage, failedDefects, handContours);
+                
+                imshow("defects", defectsImg);
+            }
+            
+            //Show the image of the binary hand
+            imshow("binaryHand", binaryImage);
+            
+            //Display a filter colour
+            Vec3b col_one = filtColours[0];
+            Mat matColOne = Mat(50,50, CV_8UC3, col_one);
+            imshow("Filter Colours", matColOne);
+            
+            continue;
+        }
+        
+        end = clock();
+        double speedPerSec = double(end - start) / double(CLOCKS_PER_SEC);
+        
+        if (frameCounter % 10 == 0)
+            cout << "Speed of program: " << double(speedPerSec) << " second(s)" << endl;
+        
+        if(waitKey(30) > 0)
+            return -1;
+        
+        imshow("main", frame);
+    }
+    
+    return 0;
+}
+
+void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> labels, char seperator)
 {
     std::stringstream fileStream(imgs_filename.c_str(), ifstream::in);
     
@@ -69,133 +224,7 @@ void read_images(std::string imgs_filename, vector<Mat> &images, vector<int> lab
     
 }
 
-int main(int argc, const char * argv[]) {
-    
-    VideoCapture cap(0); //always BGR
-    
-    int frameCounter = -1;
-    
-    if(!cap.isOpened())
-        return -1;
-    
-    BinarySkinFilter skinFilter;
-    
-    HandElementContainer handElements;
-    
-    Mat firstFrame;
-    cap >> firstFrame;
-    
-    int wCenter = firstFrame.size().width / 2;
-    int hCenter = firstFrame.size().height / 2;
-    
-    extRectOne = Rect(Point(wCenter - 100, hCenter + 70), Point(wCenter + 100, hCenter + 50));
-    extRectTwo = Rect(Point(wCenter - 100, hCenter + 150), Point(wCenter + 100, hCenter + 130));
-    extRectThree = Rect(Point(wCenter - 100, hCenter + 10), Point(wCenter + 100, hCenter - 10));
-    
-    extRectFour = Rect(Point(wCenter - 120, hCenter - 240), Point(wCenter - 100, hCenter - 80));
-    
-    extRectFive = Rect(Point(wCenter - 70, hCenter - 280), Point(wCenter - 50, hCenter - 80));
-    extRectSix = Rect(Point(wCenter + 70, hCenter - 280), Point(wCenter + 50, hCenter - 80));
-    extRectSeven = Rect(Point(wCenter - 10, hCenter - 310), Point(wCenter + 10, hCenter - 110));
-    
-    extRectEight = Rect(Point(wCenter + 140, hCenter - 50), Point(wCenter + 120, hCenter));
-
-    
-    Rect extracts[8] = {extRectOne, extRectTwo, extRectThree, extRectFour,
-                        extRectFive, extRectSix, extRectSeven, extRectEight};
-
-    namedWindow("binaryHand");
-    createTrackbar("Threshold", "binaryHand", &binaryThreshold, 100);
-    
-    Scalar boxColour(0,255,0);
-    
-    while (true)
-    {
-        Mat frame;
-        
-        cap >> frame;
-        
-        frameCounter++;
-        
-        clock_t start, end;
-        start = clock();
-        
-        skinFilter.importFrameOriginal(frame);
-        
-        if (frameCounter < 100)
-        {
-           skinFilter.showExtractAreas(frame, extracts, boxColour);
-        }
-        
-        if (frameCounter == 100)
-        {
-            skinFilter.runExtractCollection(extracts);
-            
-            skinFilter.runColourCollection(binaryThreshold, colourCountForExtracts);
-            
-            boxColour = Scalar(0,0,255);
-        }
-        
-        if (frameCounter >= 100)
-        {
-            Mat resizedFrame;
-            
-            vector<vector<Vec4i>> failedDefects;
-            
-            resize(frame, resizedFrame, Size(320,240), INTER_NEAREST);
-        
-            Mat binaryImage = skinFilter.runBinaryFiltering(resizedFrame);
-            
-            int topNContours = 2;
-            
-            handElements.findHandProperties(binaryImage, handContours, handHullPoints,
-                                            handHullInts, handDefects, topNContours);
-            
-            
-            handElements.dismissIrrelevantInfo(handDefects, handContours, 90, fingerAngles);
-            
-            failedDefects = handElements.getFailedDefects();
-            
-            bool expanded = isHandExpanded(fingerAngles, 50);
-            Scalar handColour;
-            
-            if (expanded)
-            {
-                handColour = Scalar(0,255,0);
-            }
-            else
-            {
-                handColour = Scalar(0,0,255);
-            }
-            
-            Mat handPositionId = Mat(binaryImage.rows, binaryImage.cols, CV_8UC3);
-            handPositionId = handColour;
-            
-            Mat defectsImg = handElements.drawDefects(binaryImage, handDefects, handContours);
-            
-            Mat failedDefImg = handElements.drawDefects(binaryImage, failedDefects, handContours);
-            
-            imshow("binaryHand", binaryImage);
-            imshow("defects", defectsImg);
-            imshow("handColours", handPositionId);
-            continue;
-        }
-        
-        end = clock();
-        double speedPerSec = double(end - start) / double(CLOCKS_PER_SEC);
-        
-        if (frameCounter % 10 == 0)
-            cout << "Speed of program: " << double(speedPerSec) << " second(s)" << endl;
-        
-        if(waitKey(30) > 0)
-            return -1;
-        
-        imshow("main", frame);
-    }
-    
-    return 0;
-}
-
+/*
 bool isHandExpanded(vector<int> fingerAngles, int threshDegree)
 {
     bool checkExpanded;
@@ -209,17 +238,9 @@ bool isHandExpanded(vector<int> fingerAngles, int threshDegree)
     checkExpanded = threshCount >= 4 ? true : false;
     
     return checkExpanded;
-}
+}*/
 
-bool isFingerPointed(vector<vector<Vec4i>> defects, vector<vector<Point>> contours)
-{
-    return true;
-}
 
-bool checkPointedFinger(vector<vector<Vec4i>> defects, vector<vector<Point>> contours, vector<int> fingerAngles)
-{
-    return true;
-}
 
 
 
